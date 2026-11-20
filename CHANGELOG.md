@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+- Fix: batch file detection used a case-insensitive glob on Windows and picked up `BATCH_MANIFEST.json` as a batch (caught by CI). Now matched with an exact `batch_NNNN.json` pattern.
+- CI: pinned `ubuntu-24.04`, Python 3.10 and 3.12; minimum documented Python is 3.10.
+
 ## 0.3.0 (lean / low-token)
 - SKILL.md cut from ~10 KB to ~4 KB; short description (it is loaded every session); references load only on a trigger table.
 - Token rules: terse replies, never print big files, no translation unless asked, max 3 web searches, one notes file (`reports/PROJECT.md`) instead of ~12 reports.

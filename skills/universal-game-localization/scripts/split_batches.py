@@ -6,7 +6,7 @@ Features: size limit by entry count and optionally by characters, optional group
 Never overwrites existing batches unless --force is given.
 """
 from pathlib import Path
-import argparse, hashlib, json, sys
+import argparse, hashlib, json, re, sys
 
 
 def sha256(path: Path) -> str:
@@ -78,7 +78,7 @@ def main():
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    existing = list(out.glob("batch_*.json"))
+    existing = [f for f in out.glob("*.json") if re.fullmatch(r"batch_\d{4}\.json", f.name)]
     if existing and not args.force:
         raise SystemExit(f"{out} already contains {len(existing)} batch file(s). Use --force or another --out.")
     for old in existing:

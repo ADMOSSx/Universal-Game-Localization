@@ -3,7 +3,7 @@
 Run:  python scripts/selftest.py
 """
 from pathlib import Path
-import json, subprocess, sys, tempfile
+import json, re, subprocess, sys, tempfile
 
 HERE = Path(__file__).resolve().parent
 PY = sys.executable
@@ -37,7 +37,7 @@ def main():
         assert sum(b["count"] for b in manifest["batches"]) == 25
 
         returned = t / "returned"; returned.mkdir()
-        for i, b in enumerate(sorted(batches.glob("batch_*.json"))):
+        for i, b in enumerate(sorted(f for f in batches.glob("*.json") if re.fullmatch(r"batch_\d{4}\.json", f.name))):
             d = json.loads(b.read_text(encoding="utf-8"))
             for e in d["entries"]:
                 e["translation"] = f"مرحبا {{0}} عنصر {e['id']}\n"

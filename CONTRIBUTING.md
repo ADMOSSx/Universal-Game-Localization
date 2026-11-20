@@ -12,7 +12,7 @@ Thanks for helping! Rules that keep this project useful for people on free AI li
 ```
 python skills/universal-game-localization/scripts/selftest.py
 ```
-Must print `SELFTEST PASSED` on Python 3.9+ (CI checks Windows and Linux). Add a round-trip check to `selftest.py` for any new adapter.
+Must print `SELFTEST PASSED` on Python 3.10+ (CI checks Windows and Linux). Add a round-trip check to `selftest.py` for any new adapter.
 
 ## Good first contributions
 - Report results for a game in `docs/SUPPORTED_GAMES.md`

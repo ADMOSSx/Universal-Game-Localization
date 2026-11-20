@@ -51,7 +51,7 @@ Ask:
 
 Per-project install (`.opencode/skills/`) also works; see the [OpenCode skills docs](https://opencode.ai/docs/skills).
 
-Requires **Python 3.9+**. Check the scripts work on your machine:
+Requires **Python 3.10+**. Check the scripts work on your machine:
 
 ```powershell
 cd "%USERPROFILE%\.config\opencode\skills\universal-game-localization"
@@ -149,7 +149,7 @@ npx skills add ADMOSSx/Universal-Game-Localization --skill universal-game-locali
 بعد التثبيت اكتب:
 > Use the universal-game-localization skill. Analyze this game folder: `D:\Games\MyGame`. Prepare it for Arabic localization. Do not modify the original game.
 
-يتطلب **Python 3.9 أو أحدث**. للتأكد أن السكريبتات تعمل: شغّل `python scripts\selftest.py` داخل مجلد الـ skill، ويجب أن يظهر `SELFTEST PASSED` في آخر سطر.
+يتطلب **Python 3.10 أو أحدث**. للتأكد أن السكريبتات تعمل: شغّل `python scripts\selftest.py` داخل مجلد الـ skill، ويجب أن يظهر `SELFTEST PASSED` في آخر سطر.
 
 ### حدود يجب معرفتها
 
