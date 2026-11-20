@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.2
+- Fix: `inject_text.py` re-wrote CRLF JSON files with LF endings; line endings are now preserved. Self-test fixtures are now byte-exact (Windows text mode had altered them).
+
 ## 0.3.1
 - Fix: batch file detection used a case-insensitive glob on Windows and picked up `BATCH_MANIFEST.json` as a batch (caught by CI). Now matched with an exact `batch_NNNN.json` pattern.
 - CI: pinned `ubuntu-24.04`, Python 3.10 and 3.12; minimum documented Python is 3.10.

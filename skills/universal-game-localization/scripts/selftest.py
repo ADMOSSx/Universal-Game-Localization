@@ -54,11 +54,12 @@ def main():
         # --- plain-text extract -> inject round trip (identity must reproduce files byte-for-byte) ---
         rt = t / "rt"; (rt / "Localization").mkdir(parents=True)
         (rt / "Localization" / "Game.int").write_bytes(b"\xff\xfe" + "[Menu]\r\nPlay=\"Play Game\"\r\nQuit=Quit now\r\n; note\r\n[Menu]\r\nPlay=Again\r\n".encode("utf-16-le"))
-        (rt / "Localization" / "ui.json").write_text('{\n  "title": "Main Menu",\n  "items": [\n    "Start",\n    "Options"\n  ],\n  "icon": "menu.png"\n}\n', encoding="utf-8")
-        (rt / "Localization" / "t.csv").write_text("id,text\r\na1,Hello there\r\na2,Goodbye\r\n", encoding="utf-8")
+        (rt / "Localization" / "ui.json").write_bytes(b'{\r\n  "title": "Main Menu",\r\n  "items": [\r\n    "Start",\r\n    "Options"\r\n  ],\r\n  "icon": "menu.png"\r\n}\r\n')
+        (rt / "Localization" / "ui_lf.json").write_bytes(b'{\n  "name": "Hero",\n  "tip": "Press Start"\n}\n')
+        (rt / "Localization" / "t.csv").write_bytes(b"id,text\r\na1,Hello there\r\na2,Goodbye\r\n")
         (rt / "Localization" / "lines.txt").write_bytes(b"First line\nSecond line\n")
         out = run(HERE / "extract_text.py", rt, "--out", t / "n" / "strings.json")
-        assert "strings from 4 file(s)" in out, out
+        assert "strings from 5 file(s)" in out, out
         d = json.loads((t / "n" / "strings.json").read_text(encoding="utf-8"))
         ids = [e["id"] for e in d["entries"]]
         assert "Localization/Game.int::Menu::Play#2" in ids and not any("icon" in i for i in ids), ids
@@ -66,7 +67,7 @@ def main():
             e["translation"], e["status"] = e["original"], "translated"
         (t / "n" / "ident.json").write_text(json.dumps(d), encoding="utf-8")
         run(HERE / "inject_text.py", t / "n" / "ident.json", "--files", t / "n" / "files.json", "--out", t / "p1")
-        for f in ("Game.int", "ui.json", "t.csv", "lines.txt"):
+        for f in ("Game.int", "ui.json", "ui_lf.json", "t.csv", "lines.txt"):
             assert (t / "p1" / "Localization" / f).read_bytes() == (rt / "Localization" / f).read_bytes(), f"round trip differs: {f}"
         for e in d["entries"]:
             e["translation"] = "مرحبا " + e["id"].split("::")[-1]

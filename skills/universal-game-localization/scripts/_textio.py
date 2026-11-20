@@ -121,7 +121,10 @@ def json_apply(text, opts, trans):
         applied += 1
     indent = 2 if "\n" in text.strip() else None
     out = json.dumps(data, ensure_ascii=False, indent=indent, separators=None if indent else (",", ":"))
-    return out + ("\n" if text.endswith("\n") else ""), applied, []
+    eol = "\r\n" if "\r\n" in text else "\n"
+    if eol != "\n":
+        out = out.replace("\n", eol)   # json.dumps only emits structural newlines; string newlines are escaped
+    return out + (eol if text.endswith("\n") else ""), applied, []
 
 
 # ---------- csv / tsv ----------
