@@ -1,0 +1,18 @@
+__pycache__/
+*.pyc
+.venv/
+.idea/
+.vscode/
+
+# Local localization work - never commit game files or extracted game text
+localization-work/
+HANDOFF_PACKAGE/
+HANDOFF_PACKAGE.zip
+patch/
+translation_batches/
+normalized/
+returned*/
+merged*.json
+*.report.json
+validation_report*.txt
+*.zip

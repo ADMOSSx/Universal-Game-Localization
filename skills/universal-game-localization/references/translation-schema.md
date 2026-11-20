@@ -31,7 +31,7 @@ UTF-8 JSON. Preserve source metadata. Example:
 ```
 
 ## Fields
-- `id` (required, unique, never changes after batch creation). If the source has no ID, derive a deterministic one from source path + key/index (or a hash of path+original) and document the method in `EXTRACTION_REPORT.md`.
+- `id` (required, unique, never changes after batch creation). If the source has no ID, derive a deterministic one from source path + key/index (or a hash of path+original) and document the method in `reports/PROJECT.md`.
 - `original` is read-only. `translation` is the only field a translator fills (plus `notes` and `status`).
 - `placeholders` / `formatting`: optional lists of tokens found in `original` (e.g. `{0}`, `%s`, `<b>`), useful for QA.
 - `metadata` may carry `max_chars` (integer): the validator warns when a translation is longer.
