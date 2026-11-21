@@ -50,6 +50,7 @@ def main():
     p.add_argument("--source-lang", default="en")
     p.add_argument("--target-lang", default="ar")
     p.add_argument("--max-mb", type=float, default=20.0)
+    p.add_argument("--force", action="store_true", help="replace existing regular output JSON files")
     args = p.parse_args()
 
     root_arg = Path(args.root)
@@ -60,10 +61,20 @@ def main():
         raise SystemExit(f"Not a file or folder: {root}")
     base = root.parent if root.is_file() else root
 
-    out = ensure_output_outside_source(Path(args.out), base)
-    fpath = ensure_output_outside_source(Path(args.files) if args.files else out.parent / "files.json", base)
+    out_arg = Path(args.out)
+    files_arg = Path(args.files) if args.files else out_arg.parent / "files.json"
+    if out_arg.is_symlink() or files_arg.is_symlink():
+        raise SystemExit("Output files must not be symbolic links.")
+    out = ensure_output_outside_source(out_arg, base)
+    fpath = ensure_output_outside_source(files_arg, base)
     if out == fpath:
         raise SystemExit("--out and --files must be different paths.")
+    for target in (out, fpath):
+        if target.exists():
+            if not args.force:
+                raise SystemExit(f"Refusing to overwrite existing output: {target} (use --force to replace regular files).")
+            if target.is_symlink() or not target.is_file():
+                raise SystemExit(f"Refusing to replace non-regular output: {target}")
     if args.max_mb <= 0:
         raise SystemExit("--max-mb must be greater than zero.")
 

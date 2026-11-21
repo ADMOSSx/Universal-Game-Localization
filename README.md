@@ -135,7 +135,9 @@ All in `skills/universal-game-localization/scripts/`, Python standard library on
 
 - Binary archives and proprietary formats are **not** extracted by the scripts.
 - Token counts from `split_batches.py` are conservative estimates, not exact model-tokenizer measurements.
+- Extraction refuses to overwrite existing `strings.json` / `files.json` unless `--force` is specified.
 - Patch creation requires source hashes from a fresh extraction; old metadata needs explicit `--allow-unverified-source`.
+- Patch manifests and translated files are protected from accidental overwrite unless `--force` is specified.
 - Existing patch files are not overwritten unless `--force` is specified.
 - Arabic display depends on the game's font and text renderer. The skill gives a checklist and test strings, but **only an in-game test proves it works**.
 - Engine detection is hint-based, never 100% certain.
@@ -206,7 +208,8 @@ npx skills add ADMOSSx/Universal-Game-Localization --skill universal-game-locali
 ### الأمان والقانون
 
 - مجلد اللعبة للقراءة فقط؛ الاستخراج والحقن يتحققان من المسارات والروابط الرمزية وبصمة SHA-256 للمصدر.
-- إنشاء الباتش لا يستبدل ملفات موجودة افتراضيًا؛ استخدم `--force` فقط بعد مراجعة المسارات.
+- إعادة الاستخراج لا تستبدل ملفات `strings.json` و`files.json` الموجودة إلا باستخدام `--force`.
+- إنشاء الباتش لا يستبدل ملفات أو Manifest موجودة افتراضيًا؛ استخدم `--force` فقط بعد مراجعة المسارات.
 - تقدير الـ Tokens تقريبي وليس عددًا دقيقًا من الـ tokenizer الخاص بالموديل.
 - لا تثبيت تلقائي، ولا تشغيل لملفات تنفيذية مجهولة، ولا تجاوز لحماية اللعبة.
 - نصوص اللعبة المستخرجة محمية بحقوق أصحابها: استخدمها لعملك الشخصي ولا تنشرها، والتزم بشروط اللعبة والقوانين المحلية.

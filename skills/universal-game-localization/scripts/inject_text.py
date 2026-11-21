@@ -72,6 +72,11 @@ def main():
             raise ValueError("Refusing to write the patch inside the original game folder.")
         if out.exists() and not out.is_dir():
             raise ValueError("Patch output exists and is not a directory.")
+        manifest_path = out / "PATCH_MANIFEST.json"
+        if manifest_path.is_symlink() or (manifest_path.exists() and not manifest_path.is_file()):
+            raise ValueError("PATCH_MANIFEST.json exists but is not a regular file.")
+        if manifest_path.exists() and not args.force:
+            raise ValueError("Patch manifest already exists; use --force to replace this patch.")
         merged_data = json.loads(Path(args.merged).read_text(encoding="utf-8-sig"))
         if not isinstance(merged_data, dict) or not isinstance(merged_data.get("entries"), list):
             raise ValueError("Merged data must be an object containing an entries list.")

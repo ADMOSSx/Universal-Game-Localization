@@ -79,6 +79,7 @@ def main():
         assert "strings from 5 file(s)" in out, out
         file_meta = json.loads((t / "n" / "files.json").read_text(encoding="utf-8"))
         assert all(info.get("source_sha256") for info in file_meta["files"].values())
+        run(HERE / "extract_text.py", rt, "--out", t / "n" / "strings.json", expect=1)
         run(HERE / "extract_text.py", rt, "--out", rt / "strings.json", expect=1)
         d = json.loads((t / "n" / "strings.json").read_text(encoding="utf-8"))
         ids = [e["id"] for e in d["entries"]]
