@@ -7,6 +7,8 @@ import json, re, subprocess, sys, tempfile
 
 HERE = Path(__file__).resolve().parent
 PY = sys.executable
+sys.path.insert(0, str(HERE))
+import _textio as T
 
 
 def run(*args, expect=0):
@@ -51,6 +53,21 @@ def main():
         badp = ws / "bad.json"; badp.write_text(json.dumps(bad, ensure_ascii=False), encoding="utf-8")
         run(HERE / "validate_translations.py", badp, "--report", ws / "v2.txt", expect=2)  # placeholder mismatch caught
 
+        # Markup order must be validated, and JSON path IDs must not collide.
+        markup = {"entries": [{"id": "m1", "original": "<b>Hello</b>", "translation": "</b>Hello<b>"}]}
+        markup_path = ws / "markup.json"; markup_path.write_text(json.dumps(markup), encoding="utf-8")
+        run(HERE / "validate_translations.py", markup_path, "--report", ws / "v3.txt", expect=2)
+        json_text = '{"menu.title":"Main","menu":{"title":"Settings"},"a/b":"Slash","a~b":"Tilde"}'
+        _, json_items = T.json_parse(json_text, {})
+        json_ids = [item["sid"] for item in json_items]
+        assert len(json_ids) == len(set(json_ids)) == 4, json_ids
+        assert "json:/menu.title" in json_ids and "json:/menu/title" in json_ids
+        assert "json:/a~1b" in json_ids and "json:/a~0b" in json_ids
+        csv_opts = {"delim": "comma", "no_header": False, "csv_id_col": "id", "csv_col": "text"}
+        _, csv_items, _ = T.csv_parse("id,text\\nsame,Hello\\nsame,Goodbye\\n", csv_opts)
+        csv_ids = [item["sid"] for item in csv_items]
+        assert len(csv_ids) == len(set(csv_ids)) == 2, csv_ids
+
         # --- plain-text extract -> inject round trip (identity must reproduce files byte-for-byte) ---
         rt = t / "rt"; (rt / "Localization").mkdir(parents=True)
         (rt / "Localization" / "Game.int").write_bytes(b"\xff\xfe" + "[Menu]\r\nPlay=\"Play Game\"\r\nQuit=Quit now\r\n; note\r\n[Menu]\r\nPlay=Again\r\n".encode("utf-16-le"))
@@ -60,6 +77,9 @@ def main():
         (rt / "Localization" / "lines.txt").write_bytes(b"First line\nSecond line\n")
         out = run(HERE / "extract_text.py", rt, "--out", t / "n" / "strings.json")
         assert "strings from 5 file(s)" in out, out
+        file_meta = json.loads((t / "n" / "files.json").read_text(encoding="utf-8"))
+        assert all(info.get("source_sha256") for info in file_meta["files"].values())
+        run(HERE / "extract_text.py", rt, "--out", rt / "strings.json", expect=1)
         d = json.loads((t / "n" / "strings.json").read_text(encoding="utf-8"))
         ids = [e["id"] for e in d["entries"]]
         assert "Localization/Game.int::Menu::Play#2" in ids and not any("icon" in i for i in ids), ids
@@ -69,15 +89,23 @@ def main():
         run(HERE / "inject_text.py", t / "n" / "ident.json", "--files", t / "n" / "files.json", "--out", t / "p1")
         for f in ("Game.int", "ui.json", "ui_lf.json", "t.csv", "lines.txt"):
             assert (t / "p1" / "Localization" / f).read_bytes() == (rt / "Localization" / f).read_bytes(), f"round trip differs: {f}"
+        run(HERE / "inject_text.py", t / "n" / "ident.json", "--files", t / "n" / "files.json",
+            "--out", t / "p1", expect=2)
         for e in d["entries"]:
             e["translation"] = "مرحبا " + e["id"].split("::")[-1]
         (t / "n" / "ar.json").write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
         run(HERE / "inject_text.py", t / "n" / "ar.json", "--files", t / "n" / "files.json", "--out", t / "p2")
         raw = (t / "p2" / "Localization" / "Game.int").read_bytes()
         assert raw[:2] == b"\xff\xfe" and "مرحبا" in raw[2:].decode("utf-16-le"), "UTF-16 patch wrong"
+        source_bytes = (rt / "Localization" / "Game.int").read_bytes()
+        (rt / "Localization" / "Game.int").write_bytes(source_bytes + b"; changed\r\n")
+        run(HERE / "inject_text.py", t / "n" / "ar.json", "--files", t / "n" / "files.json",
+            "--out", t / "stale-patch", expect=2)
+        (rt / "Localization" / "Game.int").write_bytes(source_bytes)
         run(HERE / "inject_text.py", t / "n" / "ar.json", "--files", t / "n" / "files.json", "--out", rt / "bad", "--src-root", rt, expect=1)
 
         (ws / "reports" / "GAME_PROFILE.json").write_text("{}", encoding="utf-8")
+        run(HERE / "make_handoff.py", ws, "--force", "--out", ws, expect=1)
         run(HERE / "make_handoff.py", ws)
         assert (ws / "HANDOFF_PACKAGE.zip").exists()
     print("SELFTEST PASSED")

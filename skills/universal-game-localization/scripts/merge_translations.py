@@ -63,7 +63,11 @@ def main():
     incoming, duplicates, unknown, blank, changed = {}, [], [], [], []
     for f in files:
         for e in entries_of(load_lenient(f), f):
+            if not isinstance(e, dict):
+                raise SystemExit(f"{f}: each returned entry must be a JSON object.")
             eid = e.get("id")
+            if not isinstance(eid, str) or not eid:
+                raise SystemExit(f"{f}: every returned entry needs a non-empty string ID.")
             if eid in incoming:
                 duplicates.append(eid)
             incoming[eid] = e
@@ -72,7 +76,10 @@ def main():
                 continue
             if "original" in e and e["original"] != index[eid].get("original"):
                 changed.append(eid)
-            if not str(e.get("translation", "")).strip():
+            translation = e.get("translation", "")
+            if not isinstance(translation, str):
+                raise SystemExit(f"{f}: translation for {eid!r} must be a string.")
+            if not translation.strip():
                 blank.append(eid)
 
     if duplicates:

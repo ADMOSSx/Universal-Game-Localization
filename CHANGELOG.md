@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+- Security: handoff packaging now rejects workspace/ancestor output paths, only replaces verified generated packages, skips symlinks, and redacts local paths / likely embedded credentials.
+- Security: extraction refuses output inside the source game; injection checks source SHA-256, path containment and symlinks, and refuses overwriting patch files unless `--force` is supplied.
+- Reliability: JSON IDs use escaped JSON Pointers; CSV IDs are made unique when source ID columns contain duplicates; INI key collisions receive deterministic disambiguators.
+- QA: validator now checks tag nesting and avoids rebuilding the source-ID set for every entry; merge rejects malformed entries and non-string translations.
+- Batching: added serialized-size and heuristic token budgets with per-batch estimates; estimates are explicitly not exact tokenizer counts.
+- Tests: expanded synthetic self-tests for JSON/CSV ID collisions, markup nesting, source integrity, safe output paths and overwrite protection.
+
 ## 0.3.3
 - Docs: new README with banner, pipeline diagram, real terminal output and size chart (SVGs in `docs/images/`).
 
