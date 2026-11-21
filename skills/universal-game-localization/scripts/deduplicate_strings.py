@@ -32,7 +32,10 @@ def semantic_key(entry):
     speaker = str(entry.get("speaker") or "").strip().casefold()
     metadata = entry.get("metadata") if isinstance(entry.get("metadata"), dict) else {}
     # Unknown context is not enough evidence to reuse a translation across files.
-    source_scope = str(entry.get("source_file") or "") if context in UNKNOWN_CONTEXT else ""
+    source_scope = (
+        str(entry.get("source_file") or f"<missing-source-file:{entry.get('id', '')}>")
+        if context in UNKNOWN_CONTEXT else ""
+    )
     return canonical({
         "original": entry.get("original", ""),
         "context": context,
@@ -96,6 +99,8 @@ def main():
         raise SystemExit("Every entry must be an object.")
     if any(not isinstance(item.get("original"), str) for item in entries):
         raise SystemExit("Every entry must contain a string 'original'.")
+    if any("metadata" in item and not isinstance(item.get("metadata"), dict) for item in entries):
+        raise SystemExit("Entry metadata must be a JSON object when present.")
 
     ids = [item.get("id") for item in entries]
     if any(not isinstance(value, str) or not value for value in ids):
@@ -155,6 +160,18 @@ def main():
         "groups": groups,
         "aliases": aliases,
     }
+
+    # Preflight both destinations so a known conflict cannot leave a one-file result.
+    for destination in (out_path, map_path):
+        if destination.is_symlink():
+            raise SystemExit(f"Refusing symbolic-link output: {destination}")
+        if destination.exists() and not args.force:
+            raise SystemExit(f"Output already exists: {destination}. Choose another path or use --force.")
+        if destination.exists() and not destination.is_file():
+            raise SystemExit(f"Refusing to replace non-regular output: {destination}")
+        temp_path = destination.with_name(destination.name + ".tmp")
+        if temp_path.exists() or temp_path.is_symlink():
+            raise SystemExit(f"Temporary output already exists: {temp_path}")
 
     write_json(out_path, unique_data, args.force)
     try:
