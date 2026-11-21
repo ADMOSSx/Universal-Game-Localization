@@ -101,7 +101,25 @@ def verified_package_dir(path):
         if not valid_package_marker(json.loads(marker.read_text(encoding="utf-8"))):
             return False
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        for item in manifest.get("files", []):
+        items = manifest.get("files", [])
+        if not isinstance(items, list):
+            return False
+        names = {item["file"] for item in items}
+        required = {"ADMOSS_HANDOFF_PACKAGE.json", "README_FIRST.md", "MASTER_INSTRUCTIONS.md",
+                    "scripts/split_batches.py", "scripts/resume_batches.py",
+                    "scripts/merge_translations.py", "scripts/validate_translations.py"}
+        if not required.issubset(names):
+            return False
+        expected = names | {"HANDOFF_MANIFEST.json", "CHECKSUMS.sha256"}
+        actual = set()
+        for item_path in path.rglob("*"):
+            if item_path.is_symlink():
+                return False
+            if item_path.is_file():
+                actual.add(item_path.relative_to(path).as_posix())
+        if actual != expected:
+            return False
+        for item in items:
             rel = Path(item["file"])
             if rel.is_absolute() or ".." in rel.parts or "\\" in item["file"]:
                 return False
@@ -127,7 +145,19 @@ def verified_package_zip(path, package_name):
             manifest = json.loads(archive.read(manifest_name).decode("utf-8"))
             if not valid_package_marker(marker):
                 return False
-            for item in manifest.get("files", []):
+            items = manifest.get("files", [])
+            if not isinstance(items, list):
+                return False
+            names = {item["file"] for item in items}
+            required = {"ADMOSS_HANDOFF_PACKAGE.json", "README_FIRST.md", "MASTER_INSTRUCTIONS.md",
+                        "scripts/split_batches.py", "scripts/resume_batches.py",
+                        "scripts/merge_translations.py", "scripts/validate_translations.py"}
+            if not required.issubset(names):
+                return False
+            expected = {prefix + name for name in names | {"HANDOFF_MANIFEST.json", "CHECKSUMS.sha256"}}
+            if set(archive.namelist()) != expected:
+                return False
+            for item in items:
                 rel = Path(item["file"])
                 if rel.is_absolute() or ".." in rel.parts or "\\" in item["file"]:
                     return False
