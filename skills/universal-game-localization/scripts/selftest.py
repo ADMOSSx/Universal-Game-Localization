@@ -43,6 +43,64 @@ def main():
         manifest = json.loads((batches / "BATCH_MANIFEST.json").read_text(encoding="utf-8"))
         assert sum(b["count"] for b in manifest["batches"]) == 25
 
+        # A token budget must include prompt overhead and a response reserve.
+        budget_batches = ws / "budget_batches"
+        run(HERE / "split_batches.py", src, "--out", budget_batches, "--size", "100",
+            "--token-budget", "100000", "--prompt-overhead", "123",
+            "--response-reserve-ratio", "1.0")
+        budget_manifest = json.loads((budget_batches / "BATCH_MANIFEST.json").read_text(encoding="utf-8"))
+        for item in budget_manifest["batches"]:
+            assert item["estimated_tokens"] == (
+                123 + item["estimated_input_tokens"] + item["estimated_output_reserve_tokens"])
+            assert item["estimated_output_reserve_tokens"] == item["estimated_input_tokens"]
+            assert item["estimated_tokens"] <= 100000
+
+        # Exact duplicates are reused only when context, speaker and formatting constraints match.
+        dedupe_source = ws / "dedupe_source.json"
+        dedupe_entries = [
+            {"id": "a1", "source_file": "menu_a.int", "context": "menu", "speaker": "",
+             "original": "Start", "translation": "", "tags": [], "formatting": [], "metadata": {}},
+            {"id": "a2", "source_file": "menu_b.int", "context": "menu", "speaker": "",
+             "original": "Start", "translation": "", "tags": [], "formatting": [], "metadata": {}},
+            {"id": "a3", "source_file": "dialogue.int", "context": "dialogue", "speaker": "",
+             "original": "Start", "translation": "", "tags": [], "formatting": [], "metadata": {}},
+            {"id": "a4", "source_file": "one.int", "context": "unknown", "speaker": "",
+             "original": "OK", "translation": "", "tags": [], "formatting": [], "metadata": {}},
+            {"id": "a5", "source_file": "two.int", "context": "unknown", "speaker": "",
+             "original": "OK", "translation": "", "tags": [], "formatting": [], "metadata": {}},
+            {"id": "a6", "source_file": "menu_c.int", "context": "menu", "speaker": "Guide",
+             "original": "Start", "translation": "", "tags": [], "formatting": [], "metadata": {}},
+            {"id": "a7", "source_file": "menu_d.int", "context": "menu", "speaker": "",
+             "original": "Start", "translation": "", "tags": [], "formatting": [], "metadata": {"max_chars": 4}},
+        ]
+        dedupe_source.write_text(json.dumps({"project": {"target_language": "ar"},
+                                             "entries": dedupe_entries}, ensure_ascii=False), encoding="utf-8")
+        unique_path, dedupe_map = ws / "strings_unique.json", ws / "DEDUPE_MAP.json"
+        run(HERE / "deduplicate_strings.py", dedupe_source, "--out", unique_path, "--map", dedupe_map)
+        unique_data = json.loads(unique_path.read_text(encoding="utf-8"))
+        map_data = json.loads(dedupe_map.read_text(encoding="utf-8"))
+        assert len(unique_data["entries"]) == 6
+        assert map_data["aliases"] == {"a2": "a1"}
+        for entry in unique_data["entries"]:
+            entry["translation"] = "ترجمة " + entry["id"]
+            entry["status"] = "translated"
+        unique_return = ws / "translated_unique.json"
+        unique_return.write_text(json.dumps(unique_data, ensure_ascii=False), encoding="utf-8")
+        expanded_path = ws / "expanded.json"
+        run(HERE / "expand_translations.py", dedupe_source, unique_return,
+            "--map", dedupe_map, "--out", expanded_path)
+        expanded = json.loads(expanded_path.read_text(encoding="utf-8"))
+        assert [e["id"] for e in expanded["entries"]] == [e["id"] for e in dedupe_entries]
+        assert expanded["entries"][0]["translation"] == expanded["entries"][1]["translation"]
+        assert expanded["entries"][1]["status"] == "translated"
+        run(HERE / "expand_translations.py", dedupe_source, unique_return,
+            "--map", dedupe_map, "--out", expanded_path, expect=1)
+        tampered_source = ws / "tampered_dedupe_source.json"
+        tampered_source.write_text(dedupe_source.read_text(encoding="utf-8").replace('"Start"', '"Begin"', 1),
+                                   encoding="utf-8")
+        run(HERE / "expand_translations.py", tampered_source, unique_return,
+            "--map", dedupe_map, "--out", ws / "should_not_expand.json", expect=1)
+
         # Resume emits only untranslated entries while retaining original batch filenames and IDs.
         partial_return = t / "partial-return"; partial_return.mkdir()
         source_batch_files = sorted(path for path in batches.glob("*.json") if re.fullmatch(r"batch_\d{4}\.json", path.name))
