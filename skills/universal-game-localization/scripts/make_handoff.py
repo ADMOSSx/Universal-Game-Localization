@@ -135,8 +135,7 @@ def verified_package_dir(path):
         names = {item["file"] for item in items}
         required = {"ADMOSS_HANDOFF_PACKAGE.json", "README_FIRST.md", "MASTER_INSTRUCTIONS.md",
                     "scripts/split_batches.py", "scripts/resume_batches.py",
-                    "scripts/merge_translations.py", "scripts/validate_translations.py",
-                    "scripts/deduplicate_strings.py", "scripts/expand_translations.py"}
+                    "scripts/merge_translations.py", "scripts/validate_translations.py"}
         if not required.issubset(names):
             return False
         expected = names | {"HANDOFF_MANIFEST.json", "CHECKSUMS.sha256"}
@@ -180,8 +179,7 @@ def verified_package_zip(path, package_name):
             names = {item["file"] for item in items}
             required = {"ADMOSS_HANDOFF_PACKAGE.json", "README_FIRST.md", "MASTER_INSTRUCTIONS.md",
                         "scripts/split_batches.py", "scripts/resume_batches.py",
-                        "scripts/merge_translations.py", "scripts/validate_translations.py",
-                    "scripts/deduplicate_strings.py", "scripts/expand_translations.py"}
+                        "scripts/merge_translations.py", "scripts/validate_translations.py"}
             if not required.issubset(names):
                 return False
             expected = {prefix + name for name in names | {"HANDOFF_MANIFEST.json", "CHECKSUMS.sha256"}}
