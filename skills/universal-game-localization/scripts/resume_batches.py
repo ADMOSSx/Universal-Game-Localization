@@ -68,6 +68,8 @@ def main():
         raise SystemExit("Output must be separate from both input directories.")
 
     source_files = sorted(path for path in batches.iterdir() if BATCH_RE.fullmatch(path.name))
+    if any(path.is_symlink() or not path.is_file() for path in source_files):
+        raise SystemExit("Source batch paths must be regular files, not symbolic links.")
     if not source_files:
         raise SystemExit(f"No batch_NNNN.json files found in {batches}")
 
@@ -75,6 +77,8 @@ def main():
     for path in sorted(returned.glob("*.json")):
         if path.name in {"BATCH_MANIFEST.json", "RESUME_MANIFEST.json"}:
             continue
+        if path.is_symlink() or not path.is_file():
+            raise SystemExit(f"Returned path is not a regular file: {path}")
         data = load_json(path)
         for entry in entries_of(data, path):
             if not isinstance(entry, dict):

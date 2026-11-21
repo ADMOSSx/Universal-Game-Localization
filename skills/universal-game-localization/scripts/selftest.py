@@ -40,7 +40,8 @@ def main():
 
         # Resume emits only untranslated entries while retaining original batch filenames and IDs.
         partial_return = t / "partial-return"; partial_return.mkdir()
-        first_batch = json.loads(sorted(batches.glob("batch_*.json"))[0].read_text(encoding="utf-8"))
+        source_batch_files = sorted(path for path in batches.glob("*.json") if re.fullmatch(r"batch_\d{4}\.json", path.name))
+        first_batch = json.loads(source_batch_files[0].read_text(encoding="utf-8"))
         completed_entry = dict(first_batch["entries"][0], translation="Done", status="translated")
         (partial_return / "partial.json").write_text(
             json.dumps({"entries": [completed_entry]}, ensure_ascii=False), encoding="utf-8")
@@ -50,8 +51,8 @@ def main():
         assert resume_manifest["completed_entries"] == 1
         assert resume_manifest["pending_entries"] == 24
         assert sorted(p.name for p in pending.glob("batch_*.json")) == sorted(
-            b.name for b in batches.glob("batch_*.json"))
-        pending_first = json.loads((pending / sorted(batches.glob("batch_*.json"))[0].name).read_text(encoding="utf-8"))
+            b.name for b in source_batch_files)
+        pending_first = json.loads((pending / source_batch_files[0].name).read_text(encoding="utf-8"))
         assert all(e["id"] != completed_entry["id"] for e in pending_first["entries"])
         run(HERE / "resume_batches.py", batches, partial_return, "--out", pending, expect=1)
         run(HERE / "resume_batches.py", batches, partial_return, "--out", pending, "--force")

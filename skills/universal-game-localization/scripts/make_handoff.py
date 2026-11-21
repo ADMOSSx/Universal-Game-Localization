@@ -87,8 +87,56 @@ def sanitize_json_paths(path):
     return True
 
 
+def valid_package_marker(data):
+    return isinstance(data, dict) and data.get("format") == "ADMOSS_HANDOFF_PACKAGE" and data.get("version") == 1
+
+
 def verified_package_dir(path):
-    return path.is_dir() and not path.is_symlink() and (path / "HANDOFF_MANIFEST.json").is_file()
+    marker = path / "ADMOSS_HANDOFF_PACKAGE.json"
+    manifest_path = path / "HANDOFF_MANIFEST.json"
+    if (not path.is_dir() or path.is_symlink() or marker.is_symlink() or manifest_path.is_symlink()
+            or not marker.is_file() or not manifest_path.is_file()):
+        return False
+    try:
+        if not valid_package_marker(json.loads(marker.read_text(encoding="utf-8"))):
+            return False
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        for item in manifest.get("files", []):
+            rel = Path(item["file"])
+            if rel.is_absolute() or ".." in rel.parts or "\\" in item["file"]:
+                return False
+            target = path / rel
+            if contains_symlink(target) or not inside(target, path) or not target.is_file():
+                return False
+            if sha256(target) != item["sha256"]:
+                return False
+        return True
+    except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+        return False
+
+
+def verified_package_zip(path, package_name):
+    try:
+        with zipfile.ZipFile(path) as archive:
+            if archive.testzip():
+                return False
+            prefix = package_name + "/"
+            marker_name = prefix + "ADMOSS_HANDOFF_PACKAGE.json"
+            manifest_name = prefix + "HANDOFF_MANIFEST.json"
+            marker = json.loads(archive.read(marker_name).decode("utf-8"))
+            manifest = json.loads(archive.read(manifest_name).decode("utf-8"))
+            if not valid_package_marker(marker):
+                return False
+            for item in manifest.get("files", []):
+                rel = Path(item["file"])
+                if rel.is_absolute() or ".." in rel.parts or "\\" in item["file"]:
+                    return False
+                name = prefix + rel.as_posix()
+                if hashlib.sha256(archive.read(name)).hexdigest() != item["sha256"]:
+                    return False
+            return True
+    except (OSError, KeyError, ValueError, zipfile.BadZipFile, json.JSONDecodeError):
+        return False
 
 
 def main():
@@ -128,9 +176,9 @@ def main():
             raise SystemExit("Refusing to delete an existing directory that is not a verified handoff package.")
     if zip_path.exists() or zip_path.is_symlink():
         if not args.force:
-            raise SystemExit(f"{zip_path} exists. Use --force to replace the generated ZIP.")
-        if zip_path.is_symlink() or not zip_path.is_file():
-            raise SystemExit("Refusing to replace a non-regular ZIP destination.")
+            raise SystemExit(f"{zip_path} exists. Use --force to replace a verified generated ZIP.")
+        if zip_path.is_symlink() or not zip_path.is_file() or not verified_package_zip(zip_path, out.name):
+            raise SystemExit("Refusing to replace a ZIP that is not a verified ADMOSS handoff package.")
 
     max_bytes = int(args.max_file_mb * 1024 * 1024)
     dirs = DEFAULT_DIRS + (["source"] if args.include_source else [])
@@ -184,6 +232,9 @@ def main():
         shutil.copy2(readme, staged / "README_FIRST.md")
         copied.append("README_FIRST.md")
 
+        marker_path = staged / "ADMOSS_HANDOFF_PACKAGE.json"
+        marker_path.write_text(json.dumps({"format": "ADMOSS_HANDOFF_PACKAGE", "version": 1}, indent=2), encoding="utf-8")
+        copied.append("ADMOSS_HANDOFF_PACKAGE.json")
         manifest_files = [{"file": name, "size": (staged / name).stat().st_size,
                            "sha256": sha256(staged / name)} for name in sorted(set(copied))]
         manifest = {"files": manifest_files, "skipped": skipped,
