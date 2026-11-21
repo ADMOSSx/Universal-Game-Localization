@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="360" viewBox="0 0 1280 360" role="img" aria-label="Pipeline: inventory, extract, batch, translate, merge and check, patch">
+<rect width="1280" height="360" rx="26" fill="#0b1020"/>
+<text x="640" y="56" text-anchor="middle" font-size="26" font-weight="800" fill="#f1f5f9" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">From game folder to translated patch</text>
+<g>
+<rect x="44" y="96" width="172" height="190" rx="18" fill="#111a33" stroke="#6366f1" stroke-width="2"/>
+<circle cx="74" cy="130" r="16" fill="#818cf8"/><text x="74" y="136" text-anchor="middle" font-size="17" font-weight="800" fill="#0b1020" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">1</text>
+<text x="100" y="137" font-size="20" font-weight="700" fill="#f1f5f9" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">Inventory</text>
+<text x="130.0" y="188" text-anchor="middle" font-size="14" fill="#a5b4fc" font-family="ui-monospace, SFMono-Regular, Consolas, 'DejaVu Sans Mono', Menlo, monospace">inventory.py</text>
+<text x="130.0" y="214" text-anchor="middle" font-size="13" fill="#94a3b8" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">engine hints</text>
+<rect x="82.0" y="238" width="96" height="28" rx="14" fill="#22c55e" fill-opacity="0.18" stroke="#22c55e" stroke-opacity="0.7"/>
+<text x="130.0" y="257" text-anchor="middle" font-size="13" font-weight="700" fill="#bbf7d0" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">0 tokens</text>
+</g><path d="M220 191.0 h18" stroke="#64748b" stroke-width="3" stroke-linecap="round"/><path d="M232 184.0 l9 7 -9 7" stroke="#64748b" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><g>
+<rect x="246" y="96" width="172" height="190" rx="18" fill="#111a33" stroke="#6366f1" stroke-width="2"/>
+<circle cx="276" cy="130" r="16" fill="#818cf8"/><text x="276" y="136" text-anchor="middle" font-size="17" font-weight="800" fill="#0b1020" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">2</text>
+<text x="302" y="137" font-size="20" font-weight="700" fill="#f1f5f9" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">Extract</text>
+<text x="332.0" y="188" text-anchor="middle" font-size="14" fill="#a5b4fc" font-family="ui-monospace, SFMono-Regular, Consolas, 'DejaVu Sans Mono', Menlo, monospace">extract_text.py</text>
+<text x="332.0" y="214" text-anchor="middle" font-size="13" fill="#94a3b8" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">.int .json .csv .ini .txt</text>
+<rect x="284.0" y="238" width="96" height="28" rx="14" fill="#22c55e" fill-opacity="0.18" stroke="#22c55e" stroke-opacity="0.7"/>
+<text x="332.0" y="257" text-anchor="middle" font-size="13" font-weight="700" fill="#bbf7d0" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">0 tokens</text>
+</g><path d="M422 191.0 h18" stroke="#64748b" stroke-width="3" stroke-linecap="round"/><path d="M434 184.0 l9 7 -9 7" stroke="#64748b" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><g>
+<rect x="448" y="96" width="172" height="190" rx="18" fill="#111a33" stroke="#6366f1" stroke-width="2"/>
+<circle cx="478" cy="130" r="16" fill="#818cf8"/><text x="478" y="136" text-anchor="middle" font-size="17" font-weight="800" fill="#0b1020" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">3</text>
+<text x="504" y="137" font-size="20" font-weight="700" fill="#f1f5f9" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">Batch</text>
+<text x="534.0" y="188" text-anchor="middle" font-size="14" fill="#a5b4fc" font-family="ui-monospace, SFMono-Regular, Consolas, 'DejaVu Sans Mono', Menlo, monospace">split_batches.py</text>
+<text x="534.0" y="214" text-anchor="middle" font-size="13" fill="#94a3b8" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">ID-stable JSON</text>
+<rect x="486.0" y="238" width="96" height="28" rx="14" fill="#22c55e" fill-opacity="0.18" stroke="#22c55e" stroke-opacity="0.7"/>
+<text x="534.0" y="257" text-anchor="middle" font-size="13" font-weight="700" fill="#bbf7d0" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">0 tokens</text>
+</g><path d="M624 191.0 h18" stroke="#64748b" stroke-width="3" stroke-linecap="round"/><path d="M636 184.0 l9 7 -9 7" stroke="#64748b" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><g>
+<rect x="650" y="96" width="172" height="190" rx="18" fill="#2a1d0b" stroke="#f59e0b" stroke-width="2"/>
+<circle cx="680" cy="130" r="16" fill="#fbbf24"/><text x="680" y="136" text-anchor="middle" font-size="17" font-weight="800" fill="#0b1020" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">4</text>
+<text x="706" y="137" font-size="20" font-weight="700" fill="#f1f5f9" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">Translate</text>
+<text x="736.0" y="188" text-anchor="middle" font-size="14" fill="#a5b4fc" font-family="ui-monospace, SFMono-Regular, Consolas, 'DejaVu Sans Mono', Menlo, monospace">any free AI</text>
+<text x="736.0" y="214" text-anchor="middle" font-size="13" fill="#94a3b8" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">outside OpenCode</text>
+<rect x="688.0" y="238" width="96" height="28" rx="14" fill="#f59e0b" fill-opacity="0.18" stroke="#f59e0b" stroke-opacity="0.7"/>
+<text x="736.0" y="257" text-anchor="middle" font-size="13" font-weight="700" fill="#fde68a" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">your choice</text>
+</g><path d="M826 191.0 h18" stroke="#64748b" stroke-width="3" stroke-linecap="round"/><path d="M838 184.0 l9 7 -9 7" stroke="#64748b" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><g>
+<rect x="852" y="96" width="172" height="190" rx="18" fill="#111a33" stroke="#6366f1" stroke-width="2"/>
+<circle cx="882" cy="130" r="16" fill="#818cf8"/><text x="882" y="136" text-anchor="middle" font-size="17" font-weight="800" fill="#0b1020" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">5</text>
+<text x="908" y="137" font-size="20" font-weight="700" fill="#f1f5f9" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">Validate</text>
+<text x="938.0" y="188" text-anchor="middle" font-size="14" fill="#a5b4fc" font-family="ui-monospace, SFMono-Regular, Consolas, 'DejaVu Sans Mono', Menlo, monospace">merge + validate</text>
+<text x="938.0" y="214" text-anchor="middle" font-size="13" fill="#94a3b8" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">placeholders, mojibake</text>
+<rect x="890.0" y="238" width="96" height="28" rx="14" fill="#22c55e" fill-opacity="0.18" stroke="#22c55e" stroke-opacity="0.7"/>
+<text x="938.0" y="257" text-anchor="middle" font-size="13" font-weight="700" fill="#bbf7d0" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">0 tokens</text>
+</g><path d="M1028 191.0 h18" stroke="#64748b" stroke-width="3" stroke-linecap="round"/><path d="M1040 184.0 l9 7 -9 7" stroke="#64748b" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/><g>
+<rect x="1054" y="96" width="172" height="190" rx="18" fill="#111a33" stroke="#6366f1" stroke-width="2"/>
+<circle cx="1084" cy="130" r="16" fill="#818cf8"/><text x="1084" y="136" text-anchor="middle" font-size="17" font-weight="800" fill="#0b1020" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">6</text>
+<text x="1110" y="137" font-size="20" font-weight="700" fill="#f1f5f9" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">Patch</text>
+<text x="1140.0" y="188" text-anchor="middle" font-size="14" fill="#a5b4fc" font-family="ui-monospace, SFMono-Regular, Consolas, 'DejaVu Sans Mono', Menlo, monospace">inject_text.py</text>
+<text x="1140.0" y="214" text-anchor="middle" font-size="13" fill="#94a3b8" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">copies + SHA-256</text>
+<rect x="1092.0" y="238" width="96" height="28" rx="14" fill="#22c55e" fill-opacity="0.18" stroke="#22c55e" stroke-opacity="0.7"/>
+<text x="1140.0" y="257" text-anchor="middle" font-size="13" font-weight="700" fill="#bbf7d0" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">0 tokens</text>
+</g>
+<text x="640" y="322" text-anchor="middle" font-size="16" fill="#94a3b8" font-family="-apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">Your game folder stays read-only all the way. The output is translated copies plus a checksum manifest.</text>
+</svg>

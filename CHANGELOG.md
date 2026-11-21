@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.3
+- Docs: new README with banner, pipeline diagram, real terminal output and size chart (SVGs in `docs/images/`).
+
 ## 0.3.2
 - Fix: `inject_text.py` re-wrote CRLF JSON files with LF endings; line endings are now preserved. Self-test fixtures are now byte-exact (Windows text mode had altered them).
 

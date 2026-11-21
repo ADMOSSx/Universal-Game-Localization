@@ -1,109 +1,151 @@
-# Universal Game Localization Skill
+<p align="center">
+  <img src="docs/images/banner.svg" alt="Universal Game Localization" width="100%">
+</p>
 
-[![selftest](https://github.com/ADMOSSx/Universal-Game-Localization/actions/workflows/selftest.yml/badge.svg)](https://github.com/ADMOSSx/Universal-Game-Localization/actions/workflows/selftest.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+<p align="center">
+  <b>Turn a game folder into translation-ready batches, then into a translated patch.<br>Built for people on free AI limits.</b>
+</p>
 
-**English** | [العربية](#العربية)
+<p align="center">
+  <a href="https://github.com/ADMOSSx/Universal-Game-Localization/actions/workflows/selftest.yml"><img src="https://github.com/ADMOSSx/Universal-Game-Localization/actions/workflows/selftest.yml/badge.svg" alt="selftest"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT"></a>
+  <img src="https://img.shields.io/badge/python-3.10%2B-3776AB.svg" alt="Python 3.10+">
+  <img src="https://img.shields.io/badge/CI-Windows%20%7C%20Linux-2ea44f.svg" alt="Windows and Linux">
+  <img src="https://img.shields.io/badge/works%20with-OpenCode-8b5cf6.svg" alt="OpenCode">
+  <img src="https://img.shields.io/badge/script%20token%20cost-0-22c55e.svg" alt="0 tokens">
+</p>
 
-A lightweight [OpenCode](https://opencode.ai) skill that helps you **prepare any game for translation** (built with Arabic/RTL in mind): inspect the game folder, detect the engine, extract text, split it into translation batches, validate the result, and build a patch - while spending as few AI tokens as possible.
+<p align="center">
+  <a href="#-install">Install</a> ·
+  <a href="#-how-it-works">How it works</a> ·
+  <a href="#-see-it-run">Demo</a> ·
+  <a href="#-scripts">Scripts</a> ·
+  <a href="#-limitations">Limitations</a> ·
+  <a href="#العربية">العربية</a>
+</p>
 
-It is designed for people on **free AI limits**: the skill file is ~4 KB, the heavy work is done by plain Python scripts (zero tokens), and the actual translation is meant to happen in any free chat AI of your choice, not inside the agent.
+---
 
-> This is a preparation toolkit, **not** a magic extractor. Plain-text formats work out of the box; binary/proprietary formats (`.pak`, `.upk`, `.assets`, ...) need an external tool, and the skill will tell you so instead of guessing.
+## ✨ Why this exists
 
-## How it works
+Most "AI localization" setups burn through free limits before a single string is translated. This skill flips that: **scripts do the boring work for free, and the AI only touches what really needs intelligence.**
 
-```
-game folder --inventory--> engine hints --extract_text--> strings.json --split_batches--> batches
-                                                                                             |
-                      patch (translated copies) <--inject_text-- merged <--merge/validate<-- translated by any AI
-```
+| | |
+|---|---|
+| 🪶 **Featherweight** | The skill file is ~4 KB, references load only when needed, and the agent keeps one short notes file instead of a pile of reports. |
+| 🧰 **Scripts, not tokens** | Inventory, extraction, batching, merging, validation and patch-building are plain Python. Zero tokens. |
+| 🔒 **Your game stays untouched** | Read-only on the game folder. Output is translated *copies* with SHA-256 checksums. No anti-cheat/DRM bypass. |
+| 🌍 **Arabic / RTL aware** | Checks for pre-shaped letters, stray bidi marks, mojibake and overflow, plus a test-string set and a rendering checklist. |
+| 🧪 **Honest about limits** | Binary formats are reported as `BLOCKED` with next steps, never guessed. |
 
-1. **Inventory** - read-only scan, compact summary + engine hints.
-2. **Extract** - `.ini .int .properties .lng .json .csv .tsv .txt` to a normalized `strings.json`.
-3. **Batch** - small, ID-stable JSON batches (grouped by file, size-capped) + a ready handoff package.
-4. **Translate** - you upload the batches to a free AI (or ask the agent to, if you have tokens to spare).
-5. **Merge + validate** - by stable ID; catches broken placeholders, changed originals, encoding damage (mojibake), pre-shaped Arabic, length risks.
-6. **Inject** - writes translated **copies** of the files (same encoding/BOM/line endings) with SHA-256 manifest. The game folder is never touched.
+## 🚀 Install
 
-## Install
-
-### Option 1 - one command (recommended)
-Needs [Node.js](https://nodejs.org). Installs for OpenCode, globally, with no prompts:
+Needs [Node.js](https://nodejs.org). One command, global, for OpenCode:
 
 ```bash
 npx skills add ADMOSSx/Universal-Game-Localization --skill universal-game-localization -g -a opencode -y
 ```
 
-Drop `-g` to install into the current project only, or drop `-a opencode` to pick other agents interactively (the same CLI supports Claude Code, Codex, Cursor and more). It uses the open [`skills` CLI](https://github.com/vercel-labs/skills); that CLI collects anonymous usage stats (set `DO_NOT_TRACK=1` to disable). Restart OpenCode afterwards.
+Restart OpenCode, then ask:
 
-### Option 2 - let your AI agent install it
+> Use the universal-game-localization skill. Analyze this game folder: `D:\Games\MyGame`. Prepare it for Arabic localization. Do not modify the original game.
+
+<details>
+<summary><b>🤖 Let your AI agent install it</b></summary>
+
 Paste this into OpenCode (or any coding agent):
 
 > Install the agent skill from https://github.com/ADMOSSx/Universal-Game-Localization. Run `npx skills add ADMOSSx/Universal-Game-Localization --skill universal-game-localization -g -a opencode -y`. If npx is not available, clone the repo and copy the folder `skills/universal-game-localization` into `~/.config/opencode/skills/` (on Windows: `%USERPROFILE%\.config\opencode\skills\`). Then run `python scripts/selftest.py` inside that folder and tell me if it prints SELFTEST PASSED.
 
-### Option 3 - manual
-Download the repo (**Code -> Download ZIP**) and copy `skills/universal-game-localization` to `%USERPROFILE%\.config\opencode\skills\`, so `...\skills\universal-game-localization\SKILL.md` exists. Restart OpenCode.
+</details>
 
-### Use it
-Ask:
-> Use the universal-game-localization skill. Analyze this game folder: `D:\Games\MyGame`. Prepare it for Arabic localization. Do not modify the original game.
+<details>
+<summary><b>📦 Manual install</b></summary>
 
-Per-project install (`.opencode/skills/`) also works; see the [OpenCode skills docs](https://opencode.ai/docs/skills).
+Download the repo (**Code → Download ZIP**) and copy `skills/universal-game-localization` to `%USERPROFILE%\.config\opencode\skills\` so that `...\skills\universal-game-localization\SKILL.md` exists. Restart OpenCode. Per-project installs (`.opencode/skills/`) also work, see the [OpenCode skills docs](https://opencode.ai/docs/skills).
 
-Requires **Python 3.10+**. Check the scripts work on your machine:
+</details>
+
+<details>
+<summary><b>✅ Check that the scripts work on your machine</b></summary>
+
+Requires **Python 3.10+**.
 
 ```powershell
 cd "%USERPROFILE%\.config\opencode\skills\universal-game-localization"
-python scripts\selftest.py        # last line should be: SELFTEST PASSED
+python scripts\selftest.py        # last line: SELFTEST PASSED
 ```
 
-## Scripts (no AI tokens used)
+</details>
 
-| Script | Purpose |
+> [!NOTE]
+> `npx skills` is a third-party CLI (from Vercel) that collects anonymous usage stats. Set `DO_NOT_TRACK=1` to disable it.
+
+## 🧭 How it works
+
+<p align="center">
+  <img src="docs/images/pipeline.svg" alt="Pipeline: inventory, extract, batch, translate, validate, patch" width="100%">
+</p>
+
+1. **Inventory** scans the folder read-only and gives engine hints plus where the text probably lives.
+2. **Extract** pulls strings from `.ini .int .properties .lng .json .csv .tsv .txt` into one normalized `strings.json`.
+3. **Batch** splits them into small, ID-stable JSON files grouped by source file.
+4. **Translate** happens in any free chat AI you like, outside the agent. (Or in the agent, if you have tokens to spare.)
+5. **Validate** merges by ID and catches broken placeholders, changed originals, encoding damage and overflow risks.
+6. **Patch** writes translated copies, keeping each file's original encoding, BOM and line endings.
+
+## 🎬 See it run
+
+<p align="center">
+  <img src="docs/images/terminal.svg" alt="Real terminal output of the scripts on a demo game" width="85%">
+</p>
+
+That is real output on a synthetic demo game. Note the last step: the validator caught two translations that dropped a placeholder (`%d` and `{1}`), the kind of bug that crashes or garbles text in-game.
+
+## 🧰 Scripts
+
+All in `skills/universal-game-localization/scripts/`, Python standard library only, **0 AI tokens**.
+
+| Script | What it does |
 |---|---|
-| `inventory.py` | Read-only folder audit: extensions, magic bytes, engine hints, localization candidates, fonts, archives |
-| `extract_text.py` | Plain-text formats -> `normalized/strings.json` + `files.json` |
+| `inventory.py` | Read-only audit: extensions, magic bytes, engine hints, localization candidates, fonts, archives |
+| `extract_text.py` | Plain-text formats → `normalized/strings.json` + `files.json` |
 | `split_batches.py` | Batches by count/characters, optional `--group-by source_file`, manifest with hashes |
-| `merge_translations.py` | Merge returned batches by ID (tolerates ```json fences; stops on unknown IDs / changed originals) |
-| `validate_translations.py` | QA: placeholders/markup, mojibake, whitespace, untranslated text, Arabic-specific checks, length |
-| `inject_text.py` | Build translated copies + `PATCH_MANIFEST.json` (reversible install data) |
-| `make_handoff.py` | Build and verify a ZIP for another translator/AI (excludes binaries and secrets) |
-| `selftest.py` | End-to-end self-test, including byte-for-byte round trips |
+| `merge_translations.py` | Merge returned batches by ID (accepts ```json fences; stops on unknown IDs or changed originals) |
+| `validate_translations.py` | Placeholders/markup, mojibake, whitespace, untranslated text, Arabic checks, length risks |
+| `inject_text.py` | Translated copies + `PATCH_MANIFEST.json` (checksums for a reversible install) |
+| `make_handoff.py` | Builds and verifies a ZIP for another translator/AI (excludes binaries and secrets) |
+| `selftest.py` | End-to-end test including byte-for-byte round trips |
 
-Typical run:
+### Supported today
 
-```powershell
-python scripts\inventory.py "D:\Games\MyGame" --out localization-work\reports
-python scripts\extract_text.py "D:\Games\MyGame" --out localization-work\normalized\strings.json
-python scripts\split_batches.py localization-work\normalized\strings.json --out localization-work\translation_batches --group-by source_file
-python scripts\make_handoff.py localization-work
-:: ... translate the batches somewhere, put the returned files in returned_batches\ ...
-python scripts\merge_translations.py localization-work\normalized\strings.json returned_batches --out merged.json
-python scripts\validate_translations.py merged.json --source localization-work\normalized\strings.json
-python scripts\inject_text.py merged.json --files localization-work\normalized\files.json --out localization-work\patch
-```
+| Format | Status |
+|---|---|
+| `.ini` `.int` `.properties` `.lng` (UTF-8, UTF-16, BOM, CRLF, quoted values) | ✅ extract + inject |
+| `.json` · `.csv` / `.tsv` · `.txt` | ✅ extract + inject (JSON/CSV are re-serialized, the script warns) |
+| `.pak` `.upk` `.assets` `.vpk` `.pck` and other binary archives | ⚠️ not handled by scripts; the skill finds a tool and asks before installing |
 
-## Limitations (honest list)
+## 🪶 Lean by design
+
+<p align="center">
+  <img src="docs/images/lean.svg" alt="SKILL.md size by version: 8.6 KB, 10.0 KB, 4.4 KB" width="75%">
+</p>
+
+## ⚠️ Limitations
 
 - Binary archives and proprietary formats are **not** extracted by the scripts.
-- JSON/CSV files are re-serialized on injection (content kept; whitespace/quoting may change - the script warns).
-- Arabic display depends on the game's font/text renderer. The skill gives a checklist and test strings, but **only an in-game test proves it works**.
-- Engine detection is hint-based and never 100% certain.
-- Online/multiplayer games with anti-cheat are out of scope; the skill stops and explains.
+- Arabic display depends on the game's font and text renderer. The skill gives a checklist and test strings, but **only an in-game test proves it works**.
+- Engine detection is hint-based, never 100% certain.
+- Online or multiplayer games with anti-cheat are out of scope; the skill stops and explains.
 
-## Safety and legal
+> [!IMPORTANT]
+> Extracted game text belongs to its owners. Use it for your own localization work, do not publish it, and respect each game's license and local law. This project is not affiliated with OpenCode, Anthropic, or any game publisher.
 
-- The game folder is treated as read-only. Reports and output go to a separate workspace; scripts refuse to write inside the game folder.
-- No automatic installs, no running unknown executables, no anti-cheat/DRM bypass.
-- Extracted game text is copyrighted by its owners. Use it for your own localization work and do not publish it. Respect each game's license/EULA and local law.
-- Not affiliated with or endorsed by OpenCode, Anthropic, or any game publisher.
+## 🤝 Contributing
 
-## Contributing
+The most useful help right now: **try it on a real game** and add the result to [docs/SUPPORTED_GAMES.md](docs/SUPPORTED_GAMES.md). See [CONTRIBUTING.md](CONTRIBUTING.md) and the [CHANGELOG](CHANGELOG.md).
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). The most useful help right now: **test on real games** and add results to [docs/SUPPORTED_GAMES.md](docs/SUPPORTED_GAMES.md). Changes: [CHANGELOG.md](CHANGELOG.md).
-
-## License
+## 📄 License
 
 [MIT](LICENSE)
 
