@@ -141,7 +141,7 @@ All in `skills/universal-game-localization/scripts/`, Python standard library on
 
 - Binary archives and proprietary formats are **not** extracted by the scripts.
 - Token counts from `split_batches.py` include configurable prompt overhead and response reserve, but remain heuristic estimates rather than exact model-tokenizer measurements.
-- Duplicate reuse is conservative: it requires exact original text plus matching context, speaker, tags, formatting and `metadata.max_chars`; unknown context is limited to the same source file.
+- Duplicate reuse is conservative: it requires exact original text plus matching context, speaker, notes, placeholders, tags, formatting and metadata. Unknown context is limited to the same source file; missing source-file information prevents cross-entry reuse.
 - Extraction refuses to overwrite existing `strings.json` / `files.json` unless `--force` is specified.
 - Patch creation requires source hashes from a fresh extraction; old metadata needs explicit `--allow-unverified-source`.
 - Patch manifests and translated files are protected from accidental overwrite unless `--force` is specified.
