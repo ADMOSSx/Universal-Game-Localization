@@ -38,6 +38,24 @@ def main():
         manifest = json.loads((batches / "BATCH_MANIFEST.json").read_text(encoding="utf-8"))
         assert sum(b["count"] for b in manifest["batches"]) == 25
 
+        # Resume emits only untranslated entries while retaining original batch filenames and IDs.
+        partial_return = t / "partial-return"; partial_return.mkdir()
+        first_batch = json.loads(sorted(batches.glob("batch_*.json"))[0].read_text(encoding="utf-8"))
+        completed_entry = dict(first_batch["entries"][0], translation="Done", status="translated")
+        (partial_return / "partial.json").write_text(
+            json.dumps({"entries": [completed_entry]}, ensure_ascii=False), encoding="utf-8")
+        pending = t / "pending"
+        run(HERE / "resume_batches.py", batches, partial_return, "--out", pending)
+        resume_manifest = json.loads((pending / "RESUME_MANIFEST.json").read_text(encoding="utf-8"))
+        assert resume_manifest["completed_entries"] == 1
+        assert resume_manifest["pending_entries"] == 24
+        assert sorted(p.name for p in pending.glob("batch_*.json")) == sorted(
+            b.name for b in batches.glob("batch_*.json"))
+        pending_first = json.loads((pending / sorted(batches.glob("batch_*.json"))[0].name).read_text(encoding="utf-8"))
+        assert all(e["id"] != completed_entry["id"] for e in pending_first["entries"])
+        run(HERE / "resume_batches.py", batches, partial_return, "--out", pending, expect=1)
+        run(HERE / "resume_batches.py", batches, partial_return, "--out", pending, "--force")
+
         returned = t / "returned"; returned.mkdir()
         for i, b in enumerate(sorted(f for f in batches.glob("*.json") if re.fullmatch(r"batch_\d{4}\.json", f.name))):
             d = json.loads(b.read_text(encoding="utf-8"))
@@ -63,6 +81,11 @@ def main():
         assert len(json_ids) == len(set(json_ids)) == 4, json_ids
         assert "json:/menu.title" in json_ids and "json:/menu/title" in json_ids
         assert "json:/a~1b" in json_ids and "json:/a~0b" in json_ids
+        root_data, root_items = T.json_parse('"Top-level dialogue"', {})
+        assert root_items[0]["sid"] == "json:@root"
+        root_patched, root_count, _ = T.json_apply('"Top-level dialogue"', {},
+                                                    {"json:@root": "ترجمة"})
+        assert root_count == 1 and json.loads(root_patched) == "ترجمة"
         csv_opts = {"delim": "comma", "no_header": False, "csv_id_col": "id", "csv_col": "text"}
         _, csv_items, _ = T.csv_parse("id,text\nsame,Hello\nsame,Goodbye\n", csv_opts)
         csv_ids = [item["sid"] for item in csv_items]
@@ -109,6 +132,7 @@ def main():
         run(HERE / "make_handoff.py", ws, "--force", "--out", ws, expect=1)
         run(HERE / "make_handoff.py", ws)
         assert (ws / "HANDOFF_PACKAGE.zip").exists()
+        assert (ws / "HANDOFF_PACKAGE" / "scripts" / "resume_batches.py").is_file()
     print("SELFTEST PASSED")
 
 

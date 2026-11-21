@@ -134,10 +134,13 @@ def json_apply(text, opts, trans):
             continue
         if not isinstance(t, str):
             raise TypeError(f"Translation for {it['sid']} must be a string.")
-        node = data
-        for part in it["path"][:-1]:
-            node = node[part]
-        node[it["path"][-1]] = t
+        if not it["path"]:
+            data = t
+        else:
+            node = data
+            for part in it["path"][:-1]:
+                node = node[part]
+            node[it["path"][-1]] = t
         applied += 1
     indent = 2 if "\n" in text.strip() else None
     out = json.dumps(data, ensure_ascii=False, indent=indent, separators=None if indent else (",", ":"))

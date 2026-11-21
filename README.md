@@ -91,8 +91,9 @@ python scripts\selftest.py        # last line: SELFTEST PASSED
 2. **Extract** pulls strings from `.ini .int .properties .lng .json .csv .tsv .txt` into one normalized `strings.json`.
 3. **Batch** splits them into small, ID-stable JSON files grouped by source file.
 4. **Translate** happens in any free chat AI you like, outside the agent. (Or in the agent, if you have tokens to spare.)
-5. **Validate** merges by ID and catches broken placeholders, changed originals, encoding damage and overflow risks.
-6. **Patch** writes translated copies, keeping each file's original encoding, BOM and line endings.
+5. **Resume** uses `resume_batches.py` to create pending-only files after an interrupted or partial translation, preserving original entry IDs and batch filenames.
+6. **Validate** merges by ID and catches broken placeholders, changed originals, encoding damage and overflow risks.
+7. **Patch** writes translated copies, keeping each file's original encoding, BOM and line endings.
 
 ## 🎬 See it run
 
@@ -111,6 +112,7 @@ All in `skills/universal-game-localization/scripts/`, Python standard library on
 | `inventory.py` | Read-only audit: extensions, magic bytes, engine hints, localization candidates, fonts, archives |
 | `extract_text.py` | Plain-text formats → `normalized/strings.json` + `files.json` with source SHA-256 hashes; refuses output inside the game |
 | `split_batches.py` | Batches by count/characters/serialized bytes and heuristic token budget; manifest includes estimates |
+| `resume_batches.py` | Builds pending-only batches from partial returns while preserving original IDs and batch filenames |
 | `merge_translations.py` | Merge returned batches by ID (accepts ```json fences; stops on unknown IDs or changed originals) |
 | `validate_translations.py` | Placeholders/markup, mojibake, whitespace, untranslated text, Arabic checks, length risks |
 | `inject_text.py` | Source-hash verification, safe relative paths, no overwrite by default, translated copies + manifest |
@@ -138,7 +140,6 @@ All in `skills/universal-game-localization/scripts/`, Python standard library on
 - Extraction refuses to overwrite existing `strings.json` / `files.json` unless `--force` is specified.
 - Patch creation requires source hashes from a fresh extraction; old metadata needs explicit `--allow-unverified-source`.
 - Patch manifests and translated files are protected from accidental overwrite unless `--force` is specified.
-- Existing patch files are not overwritten unless `--force` is specified.
 - Arabic display depends on the game's font and text renderer. The skill gives a checklist and test strings, but **only an in-game test proves it works**.
 - Engine detection is hint-based, never 100% certain.
 - Online or multiplayer games with anti-cheat are out of scope; the skill stops and explains.

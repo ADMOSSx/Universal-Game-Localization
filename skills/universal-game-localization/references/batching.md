@@ -11,3 +11,11 @@
 - Merge only by stable ID. `merge_translations.py` rejects duplicates, unknown IDs and changed originals unless explicitly allowed.
 - Keep source originals unchanged. Validate returned files (`validate_translations.py --source ...`) before and after merging.
 - Re-running the splitter never overwrites existing batches unless `--force` is given: do not re-split after translation has started (IDs and batch contents must stay stable).
+
+## Resume partial work
+
+- Keep original batch files unchanged after translation begins.
+- Put returned JSON files in a separate folder, then run `resume_batches.py translation_batches returned --out pending_batches`.
+- The resume helper marks non-empty translations as complete unless their status is `needs_review`; it emits only remaining entries, reusing the original batch filenames and entry IDs.
+- Do not point the output at either input directory. Existing generated resume files require explicit `--force`; unrelated files are never removed.
+- After all pending work is returned, merge all returned JSON files against the original normalized source as usual.

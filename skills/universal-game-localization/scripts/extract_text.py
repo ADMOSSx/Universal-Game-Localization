@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import sys
+import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _textio as T
@@ -26,11 +27,30 @@ def sha256_bytes(data):
 
 
 def ensure_output_outside_source(path, source_base):
+    absolute = Path(path).absolute()
+    if any(part.is_symlink() for part in (absolute, *absolute.parents)):
+        raise SystemExit(f"Refusing output path with a symbolic-link component: {path}")
     resolved = path.resolve()
     base = source_base.resolve()
     if resolved == base or base in resolved.parents:
         raise SystemExit(f"Refusing to write output inside the source/game folder: {resolved}")
     return resolved
+
+
+def atomic_write_text(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if any(part.is_symlink() for part in (path.parent, *path.parent.parents)):
+        raise SystemExit(f"Refusing output parent containing a symbolic link: {path.parent}")
+    handle = tempfile.NamedTemporaryFile("w", encoding="utf-8", newline="", dir=path.parent,
+                                         prefix=".localization-", suffix=".tmp", delete=False)
+    temp_path = Path(handle.name)
+    try:
+        with handle:
+            handle.write(text)
+        os.replace(temp_path, path)
+    finally:
+        if temp_path.exists():
+            temp_path.unlink()
 
 
 def main():
@@ -140,15 +160,13 @@ def main():
             print("Skipped:", "; ".join(skipped[:5]))
         raise SystemExit(1)
 
-    out.parent.mkdir(parents=True, exist_ok=True)
-    fpath.parent.mkdir(parents=True, exist_ok=True)
     strings_payload = {"schema_version": "1.0",
                        "project": {"game_title": args.title, "source_language": args.source_lang,
                                    "target_language": args.target_lang},
                        "entries": entries}
     files_payload = {"root": str(base), "files": files, "integrity": "sha256"}
-    out.write_text(json.dumps(strings_payload, ensure_ascii=False, indent=1), encoding="utf-8")
-    fpath.write_text(json.dumps(files_payload, ensure_ascii=False, indent=1), encoding="utf-8")
+    atomic_write_text(out, json.dumps(strings_payload, ensure_ascii=False, indent=1))
+    atomic_write_text(fpath, json.dumps(files_payload, ensure_ascii=False, indent=1))
     print(f"{len(entries)} strings from {len(files)} file(s) -> {out}")
     for rel, info in list(files.items())[:8]:
         print(f"  {rel}: {info['count']} ({info['adapter']}, {info['codec']})")

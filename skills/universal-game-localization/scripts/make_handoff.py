@@ -166,7 +166,7 @@ def main():
 
         scripts_dir = staged / "scripts"
         scripts_dir.mkdir(exist_ok=True)
-        for name in ("split_batches.py", "merge_translations.py", "validate_translations.py"):
+        for name in ("split_batches.py", "resume_batches.py", "merge_translations.py", "validate_translations.py"):
             shutil.copy2(SKILL_DIR / "scripts" / name, scripts_dir / name)
             copied.append(f"scripts/{name}")
 
