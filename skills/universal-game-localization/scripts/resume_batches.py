@@ -5,6 +5,7 @@ import argparse
 import json
 import re
 import sys
+from _batchio import dump_batch
 
 BATCH_RE = re.compile(r"batch_\d{4}\.json\Z")
 FENCE_RE = re.compile(r"^\s*\x60{3}[a-zA-Z0-9_-]*\s*\n(.*?)\n\s*\x60{3}\s*$", re.DOTALL)
@@ -155,7 +156,7 @@ def main():
         destination = out / name
         if destination.exists():
             raise SystemExit(f"Refusing to overwrite {destination}")
-        destination.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        destination.write_text(dump_batch(payload), encoding="utf-8")
 
     manifest = {
         "source_batch_files": len(source_files),

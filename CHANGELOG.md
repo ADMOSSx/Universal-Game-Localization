@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+- Batches are slim and compact by default (`--full` / `--pretty` to opt out): on 100 real Hollow Knight strings the batch went from 50.4 to 15.4 KB and the compact return is 82% smaller than echoing every field.
+- New `status.py`: progress and the next command in a few lines (resume after a limit runs out).
+- `SKILL.md` shortened from 7.3 to 5.3 KB; `--token-budget` removed from the default example (a small budget on a 5000-string game gave 625 batches instead of 50).
+- `make_handoff.py` also ships `_batchio.py`, which the shipped scripts now import.
+- Fix: deduplication compared the whole `metadata` object, so entries carrying a per-entry key (as an extractor for Unity sheets does) never matched: 0 of 2119 real Hollow Knight entries collapsed, although 215 exact repeats exist among the translatable ones. Only `metadata.max_*` limits now count, as documented. Maps made by the old code must be regenerated (the fingerprint changed).
+- Token efficiency: translator returns are now compact (`id` + `translation`, optional review fields); merge restores unchanged metadata from the normalized source.
+- Token budgeting: `split_batches.py` estimates prompt overhead + input + a configurable response reserve; the manifest records each component.
+- Duplicate reuse: `deduplicate_strings.py` collapses exact repeats only when context, speaker, notes, placeholders, tags, formatting and metadata match; unknown context stays scoped to its source file, and missing source-file information prevents cross-entry reuse.
+- Safe expansion: `expand_translations.py` restores every original ID, verifies the source SHA-256 against the dedupe map, and reuses translations only within mapped groups.
+- Tests: self-test covers response-aware budgets, context-safe deduplication, expansion, source tampering and overwrite protection.
 - New `unity_fonts.py` (optional, needs UnityPy + fonttools): lists Font assets inside `.assets` files and the characters each lacks. `inventory.py` cannot see Unity fonts. Tested on one real `resources.assets`; not part of CI.
 - Docs: Arabic guide now has a Unity legacy-Text section and a donor-font licensing warning; Hollow Knight run recorded in `docs/SUPPORTED_GAMES.md` (partial).
 - Fix: `100% completion` was read as the printf placeholder `% c`, so the validator rejected correct translations (seen on a real Hollow Knight run). Space is no longer accepted as a printf flag.

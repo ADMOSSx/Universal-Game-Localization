@@ -89,11 +89,12 @@ python scripts\selftest.py        # last line: SELFTEST PASSED
 
 1. **Inventory** scans the folder read-only and gives engine hints plus where the text probably lives.
 2. **Extract** pulls strings from `.ini .int .properties .lng .json .csv .tsv .txt` into one normalized `strings.json`.
-3. **Batch** splits them into small, ID-stable JSON files grouped by source file.
-4. **Translate** happens in any free chat AI you like, outside the agent. (Or in the agent, if you have tokens to spare.)
-5. **Resume** uses `resume_batches.py` to create pending-only files after an interrupted or partial translation, preserving original entry IDs and batch filenames.
-6. **Validate** merges by ID and catches broken placeholders, changed originals, encoding damage and overflow risks.
-7. **Patch** writes translated copies, keeping each file's original encoding, BOM and line endings.
+3. **Deduplicate** collapses exact repeated strings only when context, speaker, tags, formatting and length constraints match. Unknown context is scoped to its source file.
+4. **Batch** splits unique entries into small, ID-stable JSON files. The token budget includes prompt overhead and a reserved response estimate.
+5. **Translate** happens in any free chat AI you like, outside the agent. The translator returns only `id` + `translation` (and optional review notes), not the full source metadata.
+6. **Resume** uses `resume_batches.py` to create pending-only files after an interrupted or partial translation, preserving IDs and batch filenames.
+7. **Expand + validate** restores duplicate IDs from a SHA-256-bound map, then checks placeholders, markup, changed originals, encoding damage and overflow risks.
+8. **Patch** writes translated copies, keeping each file's original encoding, BOM and line endings.
 
 ## 🎬 See it run
 
@@ -111,9 +112,13 @@ All in `skills/universal-game-localization/scripts/`, Python standard library on
 |---|---|
 | `inventory.py` | Read-only audit: extensions, magic bytes, engine hints, localization candidates, fonts, archives |
 | `extract_text.py` | Plain-text formats → `normalized/strings.json` + `files.json` with source SHA-256 hashes; refuses output inside the game |
-| `split_batches.py` | Batches by count/characters/serialized bytes and heuristic token budget; manifest includes estimates |
+| `deduplicate_strings.py` | Collapses exact duplicates with matching context/speaker/format constraints; writes a source-hash-bound ID map |
+| `deduplicate_strings.py` / `expand_translations.py` | Optional: translate exact repeats once (same context and limits), then restore every ID with a hash-checked map |
+| `status.py` | Progress in 3 lines: done / needs_review / missing, and the next command |
+| `split_batches.py` | Batches by count/characters/serialized bytes and total estimated prompt + input + response budget |
 | `resume_batches.py` | Builds pending-only batches from partial returns while preserving original IDs and batch filenames |
-| `merge_translations.py` | Merge returned batches by ID, across several rounds (accepts ```json fences; stops on unknown IDs or changed originals) |
+| `merge_translations.py` | Merges compact returned `id` + `translation` records by ID; restores untouched metadata from source |
+| `expand_translations.py` | Reuses representative translations for duplicate IDs and restores the original normalized dataset |
 | `validate_translations.py` | Placeholders/markup, mojibake, whitespace, untranslated text, Arabic checks, length risks |
 | `inject_text.py` | Source-hash verification, safe relative paths, no overwrite by default, translated copies + manifest |
 | `make_handoff.py` | Builds a verified ZIP, skips symlinks and likely secrets, redacts local paths, protects existing folders |
@@ -131,13 +136,20 @@ All in `skills/universal-game-localization/scripts/`, Python standard library on
 ## 🪶 Lean by design
 
 <p align="center">
-  <img src="docs/images/lean.svg" alt="SKILL.md size by version: 8.6 KB, 10.0 KB, 4.4 KB" width="75%">
+  <img src="docs/images/lean.svg" alt="SKILL.md size by version" width="75%">
 </p>
+
+<p align="center">
+  <img src="docs/images/batches.svg" alt="Size of one 100-string batch before and after slimming" width="75%">
+</p>
+
+Batches now carry only what the translator needs (`id`, `original`, useful context and length limits). The AI writes back just `id` + `translation`, and the merge step restores every other field by ID. Measured on real Hollow Knight text: about 69% less sent and 82% less written back.
 
 ## ⚠️ Limitations
 
 - Binary archives and proprietary formats are **not** extracted by the scripts.
-- Token counts from `split_batches.py` are conservative estimates, not exact model-tokenizer measurements.
+- Token counts from `split_batches.py` include configurable prompt overhead and response reserve, but remain heuristic estimates rather than exact model-tokenizer measurements.
+- Duplicate reuse is conservative: it requires exact original text plus matching context, speaker, notes, placeholders, tags, formatting and metadata. Unknown context is limited to the same source file; missing source-file information prevents cross-entry reuse.
 - Extraction refuses to overwrite existing `strings.json` / `files.json` unless `--force` is specified.
 - Patch creation requires source hashes from a fresh extraction; old metadata needs explicit `--allow-unverified-source`.
 - Patch manifests and translated files are protected from accidental overwrite unless `--force` is specified.
@@ -174,10 +186,12 @@ The most useful help right now: **try it on a real game** and add the result to 
 
 1. **الجرد**: فحص للقراءة فقط مع ملخص مضغوط وتلميحات عن المحرك.
 2. **الاستخراج**: من `.ini .int .properties .lng .json .csv .tsv .txt` إلى ملف `strings.json` موحّد.
-3. **التقسيم**: دفعات صغيرة بمعرّفات ثابتة، مع حزمة تسليم جاهزة.
-4. **الترجمة**: ترفع الدفعات إلى AI مجاني (أو تطلب من الـ agent إن كانت لديك توكنات كافية).
-5. **الدمج والفحص**: حسب المعرّف؛ يكشف أخطاء المتغيرات (placeholders)، وتغيير النص الأصلي، وتلف الترميز، والحروف العربية المشكّلة مسبقًا، والنصوص الأطول من اللازم.
-6. **الحقن**: يكتب **نسخًا** مترجمة من الملفات (بنفس الترميز ونهايات الأسطر) مع ملف checksums. مجلد اللعبة لا يُمَس أبدًا.
+3. **إزالة التكرار**: يجمع النصوص المتطابقة فقط عند تطابق السياق والمتحدث والتنسيق وحدود الطول، ويوفر ترجمة واحدة للمجموعة.
+4. **التقسيم**: دفعات أصغر بحساب تقديري لتكلفة التعليمات والمدخلات والرد.
+5. **الترجمة**: يطلب من AI إرجاع `id` والترجمة فقط، بدل إعادة كل بيانات المصدر.
+6. **الاستكمال**: يعيد الدفعات الناقصة أو التي تحتاج مراجعة.
+7. **توسيع وفحص**: يعيد الترجمة لكل IDs الأصلية، ثم يفحص المتغيرات والتنسيق والترميز والطول.
+8. **الحقن**: يكتب **نسخًا** مترجمة من الملفات (بنفس الترميز ونهايات الأسطر) مع ملف checksums. مجلد اللعبة لا يُمَس أبدًا.
 
 ### التثبيت
 
@@ -212,7 +226,8 @@ npx skills add ADMOSSx/Universal-Game-Localization --skill universal-game-locali
 - مجلد اللعبة للقراءة فقط؛ الاستخراج والحقن يتحققان من المسارات والروابط الرمزية وبصمة SHA-256 للمصدر.
 - إعادة الاستخراج لا تستبدل ملفات `strings.json` و`files.json` الموجودة إلا باستخدام `--force`.
 - إنشاء الباتش لا يستبدل ملفات أو Manifest موجودة افتراضيًا؛ استخدم `--force` فقط بعد مراجعة المسارات.
-- تقدير الـ Tokens تقريبي وليس عددًا دقيقًا من الـ tokenizer الخاص بالموديل.
+- حساب الـ Tokens يشمل هامشًا للتعليمات والرد المتوقع، لكنه يظل تقديريًا وليس عددًا دقيقًا من tokenizer الخاص بالموديل.
+- إعادة استخدام الترجمة لا تحدث إلا مع تطابق النص والسياق والمتحدث والقيود؛ والسياق المجهول يقتصر على الملف نفسه.
 - لا تثبيت تلقائي، ولا تشغيل لملفات تنفيذية مجهولة، ولا تجاوز لحماية اللعبة.
 - نصوص اللعبة المستخرجة محمية بحقوق أصحابها: استخدمها لعملك الشخصي ولا تنشرها، والتزم بشروط اللعبة والقوانين المحلية.
 - المشروع غير تابع لـ OpenCode أو Anthropic أو أي ناشر ألعاب.
