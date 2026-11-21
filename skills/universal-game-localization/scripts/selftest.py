@@ -159,6 +159,8 @@ def main():
         assert not conflict_patch.exists()
 
         (ws / "reports" / "GAME_PROFILE.json").write_text("{}", encoding="utf-8")
+        (ws / "reports" / "PROJECT.md").write_text(
+            "# Project\nWorkspace / source path: C:\\Games\\SecretGame\n", encoding="utf-8")
         run(HERE / "make_handoff.py", ws, "--force", "--out", ws, expect=1)
         # An arbitrary existing ZIP must not be deleted by --force.
         arbitrary_zip = t / "custom.zip"; arbitrary_zip.write_text("keep me", encoding="utf-8")
@@ -167,6 +169,10 @@ def main():
         run(HERE / "make_handoff.py", ws)
         assert (ws / "HANDOFF_PACKAGE.zip").exists()
         assert (ws / "HANDOFF_PACKAGE" / "scripts" / "resume_batches.py").is_file()
+        assert (ws / "HANDOFF_PACKAGE" / "ADMOSS_HANDOFF_PACKAGE.json").is_file()
+        copied_project = (ws / "HANDOFF_PACKAGE" / "reports" / "PROJECT.md").read_text(encoding="utf-8")
+        assert "SecretGame" not in copied_project and "<LOCAL_PATH_REDACTED>" in copied_project
+        run(HERE / "make_handoff.py", ws, "--force")
     print("SELFTEST PASSED")
 
 

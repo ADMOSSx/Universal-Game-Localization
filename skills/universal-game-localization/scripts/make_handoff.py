@@ -16,7 +16,7 @@ SKILL_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_DIRS = ["reports", "translator", "normalized", "translation_batches"]
 BLOCK_EXTS = {".exe", ".dll", ".so", ".dylib", ".msi", ".pak", ".ucas", ".utoc", ".upk", ".vpk", ".pck",
               ".rpa", ".bsa", ".ba2", ".bundle", ".assets", ".arc", ".bin", ".dat", ".zip", ".7z",
-              ".rar", ".iso", ".bik", ".mp4", ".wav", ".ogg"}
+              ".rar", ".iso", ".bik", ".mp4", ".wav", ".ogg", ".locres", ".locmeta", ".mo", ".esm", ".esp", ".rgss3a", ".rgss2a", ".rgssad", ".wad"}
 SECRET_GLOBS = [".env*", "*.pem", "*.key", "id_rsa*", "credentials*", "*.pfx", "*token*", "*secret*"]
 SECRET_CONTENT_RE = re.compile(
     rb"(?i)(api[_-]?key|access[_-]?token|client[_-]?secret|password)\s*[:=]\s*[\x27\x22]?[A-Za-z0-9_./+=-]{12,}"
@@ -44,6 +44,19 @@ def contains_symlink(path):
     return any(x.is_symlink() for x in (p, *p.parents) if x.exists() or x.is_symlink())
 
 
+def contains_secret_content(path: Path, chunk_size: int = 1 << 20):
+    overlap = b""
+    with path.open("rb") as stream:
+        while True:
+            chunk = stream.read(chunk_size)
+            if not chunk:
+                return False
+            data = overlap + chunk
+            if SECRET_CONTENT_RE.search(data):
+                return True
+            overlap = data[-512:]
+
+
 def blocked(path: Path, max_bytes: int):
     if path.is_symlink():
         return "symbolic link"
@@ -54,9 +67,7 @@ def blocked(path: Path, max_bytes: int):
     try:
         if path.stat().st_size > max_bytes:
             return "larger than --max-file-mb"
-        with path.open("rb") as stream:
-            sample = stream.read(2 * 1024 * 1024)
-        if SECRET_CONTENT_RE.search(sample):
+        if contains_secret_content(path):
             return "possible embedded credential"
     except OSError as ex:
         return f"unreadable: {ex}"
@@ -69,12 +80,14 @@ def sanitize_json_paths(path):
     except (OSError, UnicodeError, json.JSONDecodeError):
         return False
 
+    path_keys = {"root", "game_dir", "source_root", "game_path", "source_path",
+                 "source_folder", "workspace_path", "project_path", "input", "workspace"}
     def visit(value):
         if isinstance(value, dict):
             for key, item in list(value.items()):
-                if key.lower() in {"root", "game_dir", "source_root", "game_path", "source_path", "input", "workspace"}:
+                if key.lower() in path_keys:
                     if isinstance(item, str) and (Path(item).is_absolute() or (len(item) > 2 and item[1:3] == ":\\")):
-                        value[key] = "<LOCAL_GAME_PATH>"
+                        value[key] = "<LOCAL_PATH_REDACTED>"
                     else:
                         visit(item)
                 else:
@@ -84,6 +97,21 @@ def sanitize_json_paths(path):
                 visit(item)
     visit(data)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    return True
+
+
+def sanitize_project_paths(path):
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        return False
+    lines = text.splitlines()
+    sanitized = []
+    for line in lines:
+        if line.lower().startswith("workspace / source path:"):
+            line = "Workspace / source path: <LOCAL_PATH_REDACTED>"
+        sanitized.append(line)
+    path.write_text("\n".join(sanitized) + ("\n" if text.endswith("\n") else ""), encoding="utf-8")
     return True
 
 
@@ -239,7 +267,11 @@ def main():
                     dest.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(source, dest)
                     if dest.name in {"files.json", "INVENTORY_SUMMARY.json"} and dest.suffix.lower() == ".json":
-                        sanitize_json_paths(dest)
+                        if not sanitize_json_paths(dest):
+                            raise SystemExit(f"Could not safely sanitize local paths in {rel}")
+                    if dest.name == "PROJECT.md":
+                        if not sanitize_project_paths(dest):
+                            raise SystemExit(f"Could not safely sanitize local paths in {rel}")
                     copied.append(rel.as_posix())
 
         scripts_dir = staged / "scripts"
