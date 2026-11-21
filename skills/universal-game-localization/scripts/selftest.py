@@ -64,7 +64,7 @@ def main():
         assert "json:/menu.title" in json_ids and "json:/menu/title" in json_ids
         assert "json:/a~1b" in json_ids and "json:/a~0b" in json_ids
         csv_opts = {"delim": "comma", "no_header": False, "csv_id_col": "id", "csv_col": "text"}
-        _, csv_items, _ = T.csv_parse("id,text\\nsame,Hello\\nsame,Goodbye\\n", csv_opts)
+        _, csv_items, _ = T.csv_parse("id,text\nsame,Hello\nsame,Goodbye\n", csv_opts)
         csv_ids = [item["sid"] for item in csv_items]
         assert len(csv_ids) == len(set(csv_ids)) == 2, csv_ids
 
