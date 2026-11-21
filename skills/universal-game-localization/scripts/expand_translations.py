@@ -28,6 +28,34 @@ def load_entries(path: Path):
     return data
 
 
+UNKNOWN_CONTEXT = {"", "unknown", "other", "n/a", "na", "none", "null"}
+
+
+def canonical(value):
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def semantic_key(entry):
+    context = str(entry.get("context") or "").strip().casefold()
+    speaker = str(entry.get("speaker") or "").strip().casefold()
+    metadata = entry.get("metadata") if isinstance(entry.get("metadata"), dict) else {}
+    source_scope = (
+        str(entry.get("source_file") or f"<missing-source-file:{entry.get('id', '')}>")
+        if context in UNKNOWN_CONTEXT else ""
+    )
+    return canonical({
+        "original": entry.get("original", ""),
+        "context": context,
+        "speaker": speaker,
+        "tags": entry.get("tags", []),
+        "formatting": entry.get("formatting", []),
+        "placeholders": entry.get("placeholders", []),
+        "notes": entry.get("notes", ""),
+        "metadata": metadata,
+        "source_scope": source_scope,
+    })
+
+
 def write_json(path: Path, data, force: bool):
     if path.is_symlink():
         raise SystemExit(f"Refusing symbolic-link output: {path}")
@@ -82,6 +110,10 @@ def main():
     source_entries = source_data["entries"]
     source_index = {}
     for item in source_entries:
+        if not isinstance(item.get("original"), str):
+            raise SystemExit("Source contains an entry with a non-string original.")
+        if "metadata" in item and not isinstance(item.get("metadata"), dict):
+            raise SystemExit("Source entry metadata must be a JSON object when present.")
         eid = item.get("id")
         if not isinstance(eid, str) or not eid:
             raise SystemExit("Source contains an entry without a valid ID.")
@@ -115,15 +147,25 @@ def main():
 
     alias_members_by_rep = {}
     seen_aliases = set()
+    seen_representatives = set()
     for group in mapping["groups"]:
         if not isinstance(group, dict):
             raise SystemExit("Malformed deduplication group.")
         rep = group.get("representative_id")
         members = group.get("member_ids")
-        if not isinstance(rep, str) or not isinstance(members, list) or not members or members[0] != rep:
+        expected_key_hash = group.get("key_sha256")
+        if (not isinstance(rep, str) or not isinstance(members, list) or len(members) < 2
+                or members[0] != rep or len(members) != len(set(members))):
             raise SystemExit("Malformed deduplication group members.")
-        if rep not in source_index or any(member not in source_index for member in members):
+        if rep in seen_representatives or rep not in source_index:
+            raise SystemExit(f"Duplicate or unknown representative ID: {rep!r}")
+        seen_representatives.add(rep)
+        if any(member not in source_index for member in members):
             raise SystemExit(f"Deduplication group {rep!r} contains an unknown source ID.")
+        for member_id in members:
+            fingerprint = hashlib.sha256(semantic_key(source_index[member_id]).encode("utf-8")).hexdigest()
+            if fingerprint != expected_key_hash:
+                raise SystemExit(f"Duplicate group {rep!r} contains entries with mismatched context or metadata.")
         for alias_id in members[1:]:
             if alias_id in seen_aliases or aliases.get(alias_id) != rep:
                 raise SystemExit(f"Deduplication alias mapping is inconsistent for {rep!r}.")
@@ -164,6 +206,8 @@ def main():
                 alias["notes"] = returned["notes"]
             reused += 1
 
+    if sha256(source_path) != actual_source_hash:
+        raise SystemExit("Original normalized source changed during expansion; no output was written.")
     result["entries"] = result_entries
     write_json(out_path, result, args.force)
     print(f"Original entries restored: {len(result_entries)}")
