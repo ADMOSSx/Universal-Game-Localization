@@ -39,7 +39,9 @@ def semantic_key(entry):
         "speaker": speaker,
         "tags": entry.get("tags", []),
         "formatting": entry.get("formatting", []),
-        "max_chars": metadata.get("max_chars"),
+        "placeholders": entry.get("placeholders", []),
+        "notes": entry.get("notes", ""),
+        "metadata": metadata,
         "source_scope": source_scope,
     })
 
@@ -92,6 +94,8 @@ def main():
     entries = data["entries"]
     if not all(isinstance(item, dict) for item in entries):
         raise SystemExit("Every entry must be an object.")
+    if any(not isinstance(item.get("original"), str) for item in entries):
+        raise SystemExit("Every entry must contain a string 'original'.")
 
     ids = [item.get("id") for item in entries]
     if any(not isinstance(value, str) or not value for value in ids):
