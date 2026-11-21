@@ -104,8 +104,8 @@ def main():
 
     if args.size < 1 or any(x < 0 for x in (args.max_chars, args.max_bytes, args.token_budget, args.prompt_overhead)):
         raise SystemExit("Batch limits and prompt overhead must be non-negative; --size must be positive.")
-    if args.response_reserve_ratio < 0:
-        raise SystemExit("--response-reserve-ratio must be non-negative.")
+    if not math.isfinite(args.response_reserve_ratio) or args.response_reserve_ratio < 0:
+        raise SystemExit("--response-reserve-ratio must be a finite, non-negative number.")
     src = Path(args.input)
     try:
         data = json.loads(src.read_text(encoding="utf-8-sig"))
