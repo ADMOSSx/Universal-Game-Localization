@@ -88,6 +88,7 @@ def main():
     if out_path.resolve() == map_path.resolve():
         raise SystemExit("--out and --map must be different paths.")
 
+    source_hash = sha256(source_path)
     try:
         data = json.loads(source_path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -144,6 +145,9 @@ def main():
         entry for entry in entries
         if entry["id"] in representative_ids or str(entry.get("translation") or "").strip()
     ]
+    if sha256(source_path) != source_hash:
+        raise SystemExit("Normalized source changed during deduplication; no outputs were written.")
+
     unique_data = dict(data)
     unique_data["entries"] = unique_entries
     unique_data["deduplication"] = {
@@ -154,7 +158,7 @@ def main():
     }
     mapping = {
         "schema_version": "1.0",
-        "source_sha256": sha256(source_path),
+        "source_sha256": source_hash,
         "source_entries": len(entries),
         "unique_entries": len(unique_entries),
         "groups": groups,
