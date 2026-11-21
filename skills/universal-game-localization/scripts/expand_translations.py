@@ -113,6 +113,8 @@ def main():
             f"Unique translation IDs do not match the map (missing={missing[:10]}, unexpected={unexpected[:10]})."
         )
 
+    alias_members_by_rep = {}
+    seen_aliases = set()
     for group in mapping["groups"]:
         if not isinstance(group, dict):
             raise SystemExit("Malformed deduplication group.")
@@ -120,10 +122,15 @@ def main():
         members = group.get("member_ids")
         if not isinstance(rep, str) or not isinstance(members, list) or not members or members[0] != rep:
             raise SystemExit("Malformed deduplication group members.")
-        if any(member not in source_index for member in members):
+        if rep not in source_index or any(member not in source_index for member in members):
             raise SystemExit(f"Deduplication group {rep!r} contains an unknown source ID.")
-        if any(aliases.get(member) != rep for member in members[1:]):
-            raise SystemExit(f"Deduplication alias mapping is inconsistent for {rep!r}.")
+        for alias_id in members[1:]:
+            if alias_id in seen_aliases or aliases.get(alias_id) != rep:
+                raise SystemExit(f"Deduplication alias mapping is inconsistent for {rep!r}.")
+            seen_aliases.add(alias_id)
+        alias_members_by_rep[rep] = members[1:]
+    if seen_aliases != set(aliases):
+        raise SystemExit("Deduplication map contains aliases not represented by a group.")
 
     result = dict(source_data)
     result_entries = [dict(entry) for entry in source_entries]
@@ -147,9 +154,7 @@ def main():
         if target["status"] == "needs_review":
             needs_review += 1
 
-        for alias_id, representative_id in aliases.items():
-            if representative_id != rep_id:
-                continue
+        for alias_id in alias_members_by_rep.get(rep_id, []):
             alias = result_index[alias_id]
             if str(alias.get("translation") or "").strip():
                 continue
