@@ -41,3 +41,10 @@ Keep tokens exactly as in the original. Their visual position can change inside 
 | Boxes / `?` | Missing glyph coverage, or encoding/codepage mismatch |
 | Garbled Latin-looking text (Ø§Ù„...) | UTF-8 read as a single-byte codepage |
 | Digits or `{0}` jump to the wrong side | Neutral-character bidi behavior |
+
+## 7. Unity legacy UI Text (observed on one real run, Hollow Knight - verify per game)
+- Text in `.assets` files is injectable with UnityPy, but the game's dynamic font had no Arabic glyphs, so boxes appeared.
+- Legacy Text has no shaping/bidi. What worked in that run: merge Arabic glyphs (including Presentation Forms A/B) into the embedded fonts, and pre-shape the strings into presentation forms in visual order **at build time, on a copy** (translator files stay logical Unicode).
+- Fonts are per text component. Patching one Font asset does not fix components that use another. List them all first (`scripts/unity_fonts.py`) and test every kind of text (menu, map, prompts, titles).
+- **Font licensing:** that run used Windows system fonts as donors. Those are proprietary: fine to try locally, but a patch containing their outlines must not be shared. Prefer open-licensed Arabic fonts (SIL OFL is common, e.g. Noto Naskh Arabic, Amiri) and confirm the license on the font's official page.
+- Pre-shaped text makes the game's text files visual-order: keep the logical version and rebuild from it, never translate from the shaped one.

@@ -213,6 +213,11 @@ def main():
         out = run(HERE / "validate_translations.py", mk, "--report", t / "mk.txt", expect=2)
         assert "b:" in out and "a:" not in out, out
 
+        # --- percent signs in prose ("100% completion") are not printf placeholders ---
+        import validate_translations as V
+        assert V.tokens("Reach 100% completion") == V.tokens("حقق 100% اكتمال"), "percent+space treated as printf"
+        assert V.tokens("Press %s now") != V.tokens("اضغط الآن") and V.tokens("Value %.2f") == V.tokens("القيمة %.2f")
+
     print("SELFTEST PASSED")
 
 

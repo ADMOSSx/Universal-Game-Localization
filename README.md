@@ -117,6 +117,7 @@ All in `skills/universal-game-localization/scripts/`, Python standard library on
 | `validate_translations.py` | Placeholders/markup, mojibake, whitespace, untranslated text, Arabic checks, length risks |
 | `inject_text.py` | Source-hash verification, safe relative paths, no overwrite by default, translated copies + manifest |
 | `make_handoff.py` | Builds a verified ZIP, skips symlinks and likely secrets, redacts local paths, protects existing folders |
+| `unity_fonts.py` | Unity only, optional (`pip install UnityPy fonttools`): lists Font assets inside `.assets` files and which characters of your translation each font lacks. Tested on one real file, not in CI |
 | `selftest.py` | End-to-end test including byte-for-byte round trips |
 
 ### Supported today

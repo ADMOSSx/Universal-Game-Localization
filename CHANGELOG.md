@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- New `unity_fonts.py` (optional, needs UnityPy + fonttools): lists Font assets inside `.assets` files and the characters each lacks. `inventory.py` cannot see Unity fonts. Tested on one real `resources.assets`; not part of CI.
+- Docs: Arabic guide now has a Unity legacy-Text section and a donor-font licensing warning; Hollow Knight run recorded in `docs/SUPPORTED_GAMES.md` (partial).
+- Fix: `100% completion` was read as the printf placeholder `% c`, so the validator rejected correct translations (seen on a real Hollow Knight run). Space is no longer accepted as a printf flag.
 - Fix: multi-round work could silently lose finished translations (a round-2 file named `batch_0002.json` overwrote round 1). `merge_translations.py` and `resume_batches.py` now accept several returned folders; later rounds override earlier ones, and a blank later entry never erases text.
 - Fix: the markup-nesting check failed entries whose original already had the same shape (e.g. a key hint `<E>`). It now flags only problems the translation added.
 - Security: handoff packaging now rejects workspace/ancestor output paths, only replaces verified generated packages, skips symlinks, and redacts local paths / likely embedded credentials.
