@@ -127,9 +127,13 @@ def main():
         returned = t / "returned"; returned.mkdir()
         for i, b in enumerate(sorted(f for f in batches.glob("*.json") if re.fullmatch(r"batch_\d{4}\.json", f.name))):
             d = json.loads(b.read_text(encoding="utf-8"))
-            for e in d["entries"]:
-                e["translation"] = f"مرحبا {{0}} عنصر {e['id']}\n"
-            text = json.dumps(d, ensure_ascii=False)
+            # Compact AI responses keep only IDs and translated text; metadata is restored by merge.
+            compact_entries = [
+                {"id": e["id"], "translation": f"مرحبا {{0}} عنصر {e['id']}\n"}
+                for e in d["entries"]
+            ]
+            compact = {"entries": compact_entries}
+            text = json.dumps(compact, ensure_ascii=False)
             (returned / b.name).write_text(("```json\n" + text + "\n```") if i == 0 else text, encoding="utf-8")  # first one fenced
         (returned / "RESUME_MANIFEST.json").write_text(
             json.dumps({"pending_entries": 0}), encoding="utf-8")
