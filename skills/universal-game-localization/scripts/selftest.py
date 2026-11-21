@@ -129,8 +129,29 @@ def main():
         (rt / "Localization" / "Game.int").write_bytes(source_bytes)
         run(HERE / "inject_text.py", t / "n" / "ar.json", "--files", t / "n" / "files.json", "--out", rt / "bad", "--src-root", rt, expect=1)
 
+        # A source file named PATCH_MANIFEST.json must not overwrite the generated manifest.
+        conflict_game = t / "conflict-game"; conflict_game.mkdir()
+        (conflict_game / "PATCH_MANIFEST.json").write_text('{"hello":"Hello"}', encoding="utf-8")
+        conflict_norm = t / "conflict-normalized"; conflict_norm.mkdir()
+        conflict_strings = conflict_norm / "strings.json"
+        run(HERE / "extract_text.py", conflict_game, "--include", "PATCH_MANIFEST.json",
+            "--out", conflict_strings)
+        conflict_data = json.loads(conflict_strings.read_text(encoding="utf-8"))
+        for entry in conflict_data["entries"]:
+            entry["translation"], entry["status"] = "مرحبا", "translated"
+        conflict_merged = conflict_norm / "merged.json"
+        conflict_merged.write_text(json.dumps(conflict_data, ensure_ascii=False), encoding="utf-8")
+        conflict_patch = t / "conflict-patch"
+        run(HERE / "inject_text.py", conflict_merged, "--files", conflict_norm / "files.json",
+            "--out", conflict_patch, expect=2)
+        assert not conflict_patch.exists()
+
         (ws / "reports" / "GAME_PROFILE.json").write_text("{}", encoding="utf-8")
         run(HERE / "make_handoff.py", ws, "--force", "--out", ws, expect=1)
+        # An arbitrary existing ZIP must not be deleted by --force.
+        arbitrary_zip = t / "custom.zip"; arbitrary_zip.write_text("keep me", encoding="utf-8")
+        run(HERE / "make_handoff.py", ws, "--force", "--out", t / "custom", expect=1)
+        assert arbitrary_zip.read_text(encoding="utf-8") == "keep me"
         run(HERE / "make_handoff.py", ws)
         assert (ws / "HANDOFF_PACKAGE.zip").exists()
         assert (ws / "HANDOFF_PACKAGE" / "scripts" / "resume_batches.py").is_file()

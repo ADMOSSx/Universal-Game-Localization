@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import sys
+import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _textio as T
@@ -137,6 +138,9 @@ def main():
                 problems.extend(f"{rel}: {sid} skipped - {why}" for sid, why in skipped)
             new_bytes, used = T.encode(new_text, info.get("codec", "utf-8"), info.get("bom", ""))
             dest = out.joinpath(*PurePosixPath(rel).parts)
+            if dest.parent == out and dest.name.casefold() == "patch_manifest.json":
+                problems.append(f"{rel}: source path conflicts with the generated PATCH_MANIFEST.json")
+                continue
             if not ensure_inside(dest, out):
                 problems.append(f"{rel}: destination escapes patch directory")
                 continue
@@ -167,24 +171,35 @@ def main():
         dest.parent.mkdir(parents=True, exist_ok=True)
         if has_symlink_component(dest.parent) or not ensure_inside(dest, out):
             raise SystemExit(f"Unsafe destination appeared during patch creation: {dest}")
-        temp = dest.with_name(dest.name + ".tmp-localization")
-        if temp.exists() or temp.is_symlink():
-            raise SystemExit(f"Temporary destination already exists: {temp}")
+        temp_path = None
         try:
-            with open(temp, "xb") as f:
-                f.write(data)
+            with tempfile.NamedTemporaryFile("wb", dir=dest.parent, prefix=".localization-patch-",
+                                             suffix=".tmp", delete=False) as stream:
+                stream.write(data)
+                temp_path = Path(stream.name)
             if dest.exists() and not args.force:
                 raise FileExistsError(dest)
-            os.replace(temp, dest)
+            os.replace(temp_path, dest)
+            temp_path = None
         finally:
-            if temp.exists():
-                temp.unlink()
+            if temp_path is not None and temp_path.exists():
+                temp_path.unlink()
         manifest.append(record)
 
     out.mkdir(parents=True, exist_ok=True)
-    (out / "PATCH_MANIFEST.json").write_text(
-        json.dumps({"source_root": "<LOCAL_GAME_PATH>", "files": manifest}, ensure_ascii=False, indent=2),
-        encoding="utf-8")
+    manifest_path = out / "PATCH_MANIFEST.json"
+    temp_manifest = None
+    try:
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=out, prefix=".patch-manifest-",
+                                         suffix=".tmp", delete=False) as stream:
+            json.dump({"source_root": "<LOCAL_GAME_PATH>", "files": manifest}, stream,
+                      ensure_ascii=False, indent=2)
+            temp_manifest = Path(stream.name)
+        os.replace(temp_manifest, manifest_path)
+        temp_manifest = None
+    finally:
+        if temp_manifest is not None and temp_manifest.exists():
+            temp_manifest.unlink()
     print(f"Patched copies: {len(manifest)} file(s), {sum(x['applied'] for x in manifest)} strings -> {out}")
     print("Source files were not modified.")
 
