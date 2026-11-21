@@ -89,11 +89,12 @@ python scripts\selftest.py        # last line: SELFTEST PASSED
 
 1. **Inventory** scans the folder read-only and gives engine hints plus where the text probably lives.
 2. **Extract** pulls strings from `.ini .int .properties .lng .json .csv .tsv .txt` into one normalized `strings.json`.
-3. **Batch** splits them into small, ID-stable JSON files grouped by source file.
-4. **Translate** happens in any free chat AI you like, outside the agent. (Or in the agent, if you have tokens to spare.)
-5. **Resume** uses `resume_batches.py` to create pending-only files after an interrupted or partial translation, preserving original entry IDs and batch filenames.
-6. **Validate** merges by ID and catches broken placeholders, changed originals, encoding damage and overflow risks.
-7. **Patch** writes translated copies, keeping each file's original encoding, BOM and line endings.
+3. **Deduplicate** collapses exact repeated strings only when context, speaker, tags, formatting and length constraints match. Unknown context is scoped to its source file.
+4. **Batch** splits unique entries into small, ID-stable JSON files. The token budget includes prompt overhead and a reserved response estimate.
+5. **Translate** happens in any free chat AI you like, outside the agent. The translator returns only `id` + `translation` (and optional review notes), not the full source metadata.
+6. **Resume** uses `resume_batches.py` to create pending-only files after an interrupted or partial translation, preserving IDs and batch filenames.
+7. **Expand + validate** restores duplicate IDs from a SHA-256-bound map, then checks placeholders, markup, changed originals, encoding damage and overflow risks.
+8. **Patch** writes translated copies, keeping each file's original encoding, BOM and line endings.
 
 ## 🎬 See it run
 
@@ -111,9 +112,11 @@ All in `skills/universal-game-localization/scripts/`, Python standard library on
 |---|---|
 | `inventory.py` | Read-only audit: extensions, magic bytes, engine hints, localization candidates, fonts, archives |
 | `extract_text.py` | Plain-text formats → `normalized/strings.json` + `files.json` with source SHA-256 hashes; refuses output inside the game |
-| `split_batches.py` | Batches by count/characters/serialized bytes and heuristic token budget; manifest includes estimates |
+| `deduplicate_strings.py` | Collapses exact duplicates with matching context/speaker/format constraints; writes a source-hash-bound ID map |
+| `split_batches.py` | Batches by count/characters/serialized bytes and total estimated prompt + input + response budget |
 | `resume_batches.py` | Builds pending-only batches from partial returns while preserving original IDs and batch filenames |
-| `merge_translations.py` | Merge returned batches by ID, across several rounds (accepts ```json fences; stops on unknown IDs or changed originals) |
+| `merge_translations.py` | Merges compact returned `id` + `translation` records by ID; restores untouched metadata from source |
+| `expand_translations.py` | Reuses representative translations for duplicate IDs and restores the original normalized dataset |
 | `validate_translations.py` | Placeholders/markup, mojibake, whitespace, untranslated text, Arabic checks, length risks |
 | `inject_text.py` | Source-hash verification, safe relative paths, no overwrite by default, translated copies + manifest |
 | `make_handoff.py` | Builds a verified ZIP, skips symlinks and likely secrets, redacts local paths, protects existing folders |
