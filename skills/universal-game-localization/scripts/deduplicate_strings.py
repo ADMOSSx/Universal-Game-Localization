@@ -111,13 +111,13 @@ def main():
             ordered_keys.append(key)
         groups_by_key[key].append(entry)
 
-    unique_entries = []
+    representative_ids = set()
     groups = []
     aliases = {}
     for key in ordered_keys:
         members = groups_by_key[key]
         representative = members[0]
-        unique_entries.append(representative)
+        representative_ids.add(representative["id"])
         if len(members) > 1:
             member_ids = [item["id"] for item in members]
             rep_id = representative["id"]
@@ -130,9 +130,11 @@ def main():
             for alias_id in member_ids[1:]:
                 aliases[alias_id] = rep_id
 
-    # Keep already-translated entries as independent entries.
-    translated_entries = [e for e in entries if str(e.get("translation") or "").strip()]
-    unique_entries.extend(translated_entries)
+    # Keep original order and preserve already-translated entries independently.
+    unique_entries = [
+        entry for entry in entries
+        if entry["id"] in representative_ids or str(entry.get("translation") or "").strip()
+    ]
     unique_data = dict(data)
     unique_data["entries"] = unique_entries
     unique_data["deduplication"] = {
