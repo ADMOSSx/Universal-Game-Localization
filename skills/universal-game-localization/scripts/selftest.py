@@ -23,10 +23,14 @@ def main():
         t = Path(t)
         game = t / "game"; (game / "Localization" / "INT").mkdir(parents=True); (game / "Content" / "Paks").mkdir(parents=True)
         (game / "Localization" / "INT" / "Game.int").write_text("[Game]\nHello=Hello\n", encoding="utf-8")
+        (game / "Config").mkdir()
+        (game / "Config" / "Game.ini").write_text("[General]\nTitle=Example\n", encoding="utf-8")
         (game / "Content" / "Paks" / "main.pak").write_bytes(b"\x00" * 64)
         ws = t / "ws"
         out = run(HERE / "inventory.py", game, "--out", ws / "reports", "--hash-limit-mb", "1")
         assert "Unreal" in out, out
+        inventory_summary = json.loads((ws / "reports" / "INVENTORY_SUMMARY.json").read_text(encoding="utf-8"))
+        assert "Config/Game.ini" in inventory_summary["localization_candidates"]["sample"]
         run(HERE / "inventory.py", game, "--out", game / "reports", expect=1)  # must refuse writing into the game folder
 
         entries = [{"id": f"e{i:03d}", "source_file": f"f{i % 3}.int", "context": "menu", "original": f"Hello {{0}} item {i}\n",
@@ -57,6 +61,10 @@ def main():
         assert all(e["id"] != completed_entry["id"] for e in pending_first["entries"])
         run(HERE / "resume_batches.py", batches, partial_return, "--out", pending, expect=1)
         run(HERE / "resume_batches.py", batches, partial_return, "--out", pending, "--force")
+        unknown_return = t / "unknown-return"; unknown_return.mkdir()
+        (unknown_return / "unknown.json").write_text(
+            json.dumps({"entries": [{"id": "not-in-source", "translation": ""}]}), encoding="utf-8")
+        run(HERE / "resume_batches.py", batches, unknown_return, "--out", t / "unknown-pending", expect=1)
 
         returned = t / "returned"; returned.mkdir()
         for i, b in enumerate(sorted(f for f in batches.glob("*.json") if re.fullmatch(r"batch_\d{4}\.json", f.name))):
