@@ -140,7 +140,8 @@ All in `skills/universal-game-localization/scripts/`, Python standard library on
 ## ⚠️ Limitations
 
 - Binary archives and proprietary formats are **not** extracted by the scripts.
-- Token counts from `split_batches.py` are conservative estimates, not exact model-tokenizer measurements.
+- Token counts from `split_batches.py` include configurable prompt overhead and response reserve, but remain heuristic estimates rather than exact model-tokenizer measurements.
+- Duplicate reuse is conservative: it requires exact original text plus matching context, speaker, tags, formatting and `metadata.max_chars`; unknown context is limited to the same source file.
 - Extraction refuses to overwrite existing `strings.json` / `files.json` unless `--force` is specified.
 - Patch creation requires source hashes from a fresh extraction; old metadata needs explicit `--allow-unverified-source`.
 - Patch manifests and translated files are protected from accidental overwrite unless `--force` is specified.
@@ -177,10 +178,12 @@ The most useful help right now: **try it on a real game** and add the result to 
 
 1. **الجرد**: فحص للقراءة فقط مع ملخص مضغوط وتلميحات عن المحرك.
 2. **الاستخراج**: من `.ini .int .properties .lng .json .csv .tsv .txt` إلى ملف `strings.json` موحّد.
-3. **التقسيم**: دفعات صغيرة بمعرّفات ثابتة، مع حزمة تسليم جاهزة.
-4. **الترجمة**: ترفع الدفعات إلى AI مجاني (أو تطلب من الـ agent إن كانت لديك توكنات كافية).
-5. **الدمج والفحص**: حسب المعرّف؛ يكشف أخطاء المتغيرات (placeholders)، وتغيير النص الأصلي، وتلف الترميز، والحروف العربية المشكّلة مسبقًا، والنصوص الأطول من اللازم.
-6. **الحقن**: يكتب **نسخًا** مترجمة من الملفات (بنفس الترميز ونهايات الأسطر) مع ملف checksums. مجلد اللعبة لا يُمَس أبدًا.
+3. **إزالة التكرار**: يجمع النصوص المتطابقة فقط عند تطابق السياق والمتحدث والتنسيق وحدود الطول، ويوفر ترجمة واحدة للمجموعة.
+4. **التقسيم**: دفعات أصغر بحساب تقديري لتكلفة التعليمات والمدخلات والرد.
+5. **الترجمة**: يطلب من AI إرجاع `id` والترجمة فقط، بدل إعادة كل بيانات المصدر.
+6. **الاستكمال**: يعيد الدفعات الناقصة أو التي تحتاج مراجعة.
+7. **توسيع وفحص**: يعيد الترجمة لكل IDs الأصلية، ثم يفحص المتغيرات والتنسيق والترميز والطول.
+8. **الحقن**: يكتب **نسخًا** مترجمة من الملفات (بنفس الترميز ونهايات الأسطر) مع ملف checksums. مجلد اللعبة لا يُمَس أبدًا.
 
 ### التثبيت
 
@@ -215,7 +218,8 @@ npx skills add ADMOSSx/Universal-Game-Localization --skill universal-game-locali
 - مجلد اللعبة للقراءة فقط؛ الاستخراج والحقن يتحققان من المسارات والروابط الرمزية وبصمة SHA-256 للمصدر.
 - إعادة الاستخراج لا تستبدل ملفات `strings.json` و`files.json` الموجودة إلا باستخدام `--force`.
 - إنشاء الباتش لا يستبدل ملفات أو Manifest موجودة افتراضيًا؛ استخدم `--force` فقط بعد مراجعة المسارات.
-- تقدير الـ Tokens تقريبي وليس عددًا دقيقًا من الـ tokenizer الخاص بالموديل.
+- حساب الـ Tokens يشمل هامشًا للتعليمات والرد المتوقع، لكنه يظل تقديريًا وليس عددًا دقيقًا من tokenizer الخاص بالموديل.
+- إعادة استخدام الترجمة لا تحدث إلا مع تطابق النص والسياق والمتحدث والقيود؛ والسياق المجهول يقتصر على الملف نفسه.
 - لا تثبيت تلقائي، ولا تشغيل لملفات تنفيذية مجهولة، ولا تجاوز لحماية اللعبة.
 - نصوص اللعبة المستخرجة محمية بحقوق أصحابها: استخدمها لعملك الشخصي ولا تنشرها، والتزم بشروط اللعبة والقوانين المحلية.
 - المشروع غير تابع لـ OpenCode أو Anthropic أو أي ناشر ألعاب.
