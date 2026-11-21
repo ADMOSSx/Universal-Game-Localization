@@ -9,6 +9,7 @@ HERE = Path(__file__).resolve().parent
 PY = sys.executable
 sys.path.insert(0, str(HERE))
 import _textio as T
+import split_batches as B
 
 
 def run(*args, expect=0):
@@ -64,6 +65,8 @@ def main():
                 e["translation"] = f"مرحبا {{0}} عنصر {e['id']}\n"
             text = json.dumps(d, ensure_ascii=False)
             (returned / b.name).write_text(("```json\n" + text + "\n```") if i == 0 else text, encoding="utf-8")  # first one fenced
+        (returned / "RESUME_MANIFEST.json").write_text(
+            json.dumps({"pending_entries": 0}), encoding="utf-8")
         merged = ws / "merged.json"
         run(HERE / "merge_translations.py", src, returned, "--out", merged, "--require-complete")
         run(HERE / "validate_translations.py", merged, "--source", src, "--report", ws / "v.txt")
@@ -80,6 +83,7 @@ def main():
         _, json_items = T.json_parse(json_text, {})
         json_ids = [item["sid"] for item in json_items]
         assert len(json_ids) == len(set(json_ids)) == 4, json_ids
+        assert B.estimated_tokens("مرحبا") >= 5  # conservative multilingual estimate
         assert "json:/menu.title" in json_ids and "json:/menu/title" in json_ids
         assert "json:/a~1b" in json_ids and "json:/a~0b" in json_ids
         root_data, root_items = T.json_parse('"Top-level dialogue"', {})

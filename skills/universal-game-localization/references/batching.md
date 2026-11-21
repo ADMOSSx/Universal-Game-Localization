@@ -1,6 +1,6 @@
 # Translation batch guidance
 
-- Default batch size: 100 entries; adjust to the target AI's upload/context limits (check current limits).
+- Default batch size: 100 entries; adjust to the target AI's upload/context limits (check current limits). `--token-budget` caps a conservative heuristic estimate, not an exact model token count.
 - Keep each entry atomic. Never split one string across batches.
 - Prefer context-aware batching: `split_batches.py --group-by source_file` (or `context`) keeps related strings together; `--max-chars` caps batch text volume.
 - Include context, speaker, tags, notes, original text, ID and an empty translation.

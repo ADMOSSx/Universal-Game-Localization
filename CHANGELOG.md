@@ -6,7 +6,8 @@
 - Reliability: JSON IDs use escaped JSON Pointers; CSV IDs are made unique when source ID columns contain duplicates; INI key collisions receive deterministic disambiguators.
 - QA: validator now checks tag nesting and avoids rebuilding the source-ID set for every entry; merge rejects malformed entries and non-string translations.
 - Batching: added serialized-size and heuristic token budgets with per-batch estimates; estimates are explicitly not exact tokenizer counts.
-- Resume: added `resume_batches.py` to emit only untranslated / `needs_review` entries while preserving original entry IDs and batch filenames.
+- Resume: added `resume_batches.py` to emit only untranslated / `needs_review` entries while preserving original entry IDs and batch filenames; merge ignores its manifest.
+- Token estimate: raised the UTF-8 byte heuristic to be more conservative for multilingual text; counts remain estimates, not tokenizer output.
 - Reliability: extraction output writes are staged atomically; JSON top-level string values can now be injected correctly.
 - Tests: expanded synthetic self-tests for JSON/CSV ID collisions, markup nesting, source integrity, safe output paths and overwrite protection.
 

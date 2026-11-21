@@ -21,7 +21,7 @@ def estimated_tokens(text):
     """Conservative heuristic, not an exact model tokenizer count."""
     chars = len(text)
     utf8_bytes = len(text.encode("utf-8"))
-    return max(math.ceil(utf8_bytes / 3), math.ceil(chars / 1.5))
+    return max(math.ceil(utf8_bytes / 2), math.ceil(chars / 1.5))
 
 
 def entry_metrics(entry):
@@ -138,7 +138,7 @@ def main():
         "schema_version": data.get("schema_version", "unknown"),
         "total_entries": len(entries), "batch_size": args.size,
         "max_chars": args.max_chars, "max_bytes": args.max_bytes,
-        "token_budget": args.token_budget, "token_estimator": "max(utf8_bytes/3, characters/1.5) + 4 per entry; heuristic only",
+        "token_budget": args.token_budget, "token_estimator": "max(utf8_bytes/2, characters/1.5) + 4 per entry; conservative heuristic only",
         "group_by": args.group_by or None, "total_batches": total, "oversized_entries": oversized,
         "batches": [],
     }

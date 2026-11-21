@@ -57,7 +57,8 @@ def main():
             raise SystemExit(f"Duplicate source ID: {eid}")
         index[eid] = e
 
-    files = [f for f in sorted(Path(args.translated_dir).glob("*.json")) if f.name != "BATCH_MANIFEST.json"]
+    files = [f for f in sorted(Path(args.translated_dir).glob("*.json"))
+             if f.name not in {"BATCH_MANIFEST.json", "RESUME_MANIFEST.json"}]
     if not files:
         raise SystemExit(f"No JSON files found in {args.translated_dir}")
     incoming, duplicates, unknown, blank, changed = {}, [], [], [], []
