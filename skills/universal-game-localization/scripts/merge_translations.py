@@ -38,7 +38,8 @@ def main():
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("source", help="Normalized source JSON")
-    p.add_argument("translated_dir", help="Directory with returned translated batch JSON files")
+    p.add_argument("translated_dir", nargs="+",
+                   help="Directory with returned batch JSON files; give several to merge rounds (later overrides earlier)")
     p.add_argument("--out", default="merged_translations.json")
     p.add_argument("--allow-unknown-ids", action="store_true", help="ignore returned IDs not in the source")
     p.add_argument("--allow-changed-original", action="store_true",
@@ -57,23 +58,38 @@ def main():
             raise SystemExit(f"Duplicate source ID: {eid}")
         index[eid] = e
 
-    files = [f for f in sorted(Path(args.translated_dir).glob("*.json")) if f.name != "BATCH_MANIFEST.json"]
-    if not files:
-        raise SystemExit(f"No JSON files found in {args.translated_dir}")
-    incoming, duplicates, unknown, blank, changed = {}, [], [], [], []
-    for f in files:
-        for e in entries_of(load_lenient(f), f):
-            eid = e.get("id")
-            if eid in incoming:
-                duplicates.append(eid)
-            incoming[eid] = e
-            if eid not in index:
-                unknown.append(eid)
-                continue
-            if "original" in e and e["original"] != index[eid].get("original"):
-                changed.append(eid)
-            if not str(e.get("translation", "")).strip():
-                blank.append(eid)
+    incoming, duplicates, unknown, changed, overridden = {}, [], [], [], 0
+    for d in args.translated_dir:       # several dirs = several rounds; later rounds override earlier ones
+        files = [f for f in sorted(Path(d).glob("*.json"))
+                 if f.name not in {"BATCH_MANIFEST.json", "RESUME_MANIFEST.json"}]
+        if not files:
+            raise SystemExit(f"No JSON files found in {d}")
+        seen_here = set()
+        for f in files:
+            for e in entries_of(load_lenient(f), f):
+                if not isinstance(e, dict):
+                    raise SystemExit(f"{f}: each returned entry must be a JSON object.")
+                eid = e.get("id")
+                if not isinstance(eid, str) or not eid:
+                    raise SystemExit(f"{f}: every returned entry needs a non-empty string ID.")
+                translation = e.get("translation", "")
+                if not isinstance(translation, str):
+                    raise SystemExit(f"{f}: translation for {eid!r} must be a string.")
+                if eid in seen_here:
+                    duplicates.append(eid)      # same ID twice inside ONE directory is still an error
+                seen_here.add(eid)
+                prev = incoming.get(eid)
+                if prev is None or translation.strip():   # a blank later entry never erases earlier text
+                    if prev is not None:
+                        overridden += 1
+                    incoming[eid] = e
+                if eid not in index:
+                    unknown.append(eid)
+                    continue
+                if "original" in e and e["original"] != index[eid].get("original"):
+                    changed.append(eid)
+    unknown, changed = list(dict.fromkeys(unknown)), list(dict.fromkeys(changed))
+    blank = [i for i, e in incoming.items() if i in index and not str(e.get("translation", "")).strip()]
 
     if duplicates:
         raise SystemExit(f"Duplicate translated IDs (merge stopped): {duplicates[:20]}")
@@ -105,11 +121,13 @@ def main():
     out.write_text(json.dumps(merged, ensure_ascii=False, indent=2), encoding="utf-8")
     report = {"source_entries": len(src_entries), "returned_entries": len(incoming),
               "translations_applied": taken, "unknown_ids": unknown, "changed_originals": changed,
-              "blank_returned": blank, "never_returned": not_returned, "still_empty": still_empty}
+              "blank_returned": blank, "overridden_by_later_round": overridden, "never_returned": not_returned, "still_empty": still_empty}
     out.with_suffix(".report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Merged output: {out.resolve()}")
     print(f"Source entries: {len(src_entries)}; returned: {len(incoming)}; applied: {taken}; "
           f"still empty: {len(still_empty)}; never returned: {len(not_returned)}")
+    if overridden:
+        print(f"Entries replaced by a later round: {overridden}")
     if blank:
         print(f"Returned with blank translation: {len(blank)}")
     if unknown:

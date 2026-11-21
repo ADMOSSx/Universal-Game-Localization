@@ -1,17 +1,56 @@
 #!/usr/bin/env python3
-"""Extract translatable strings from plain-text game files into normalized/strings.json (read-only).
-
-Supported without writing any custom code: ini-like (.ini .int .properties .lng), .json, .csv/.tsv, .txt.
-Binary/proprietary formats are NOT handled here (investigate those separately).
-Also writes files.json (per-file adapter/encoding) which inject_text.py needs. Costs no AI tokens.
-"""
+"""Extract translatable strings from supported plain-text game files (read-only source)."""
 from pathlib import Path
-import argparse, fnmatch, json, os, sys
+import argparse
+import fnmatch
+import hashlib
+import json
+import os
+import sys
+import tempfile
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _textio as T
 
-LOC_WORDS = ("local", "lang", "i18n", "l10n", "string", "subtitle", "dialog", "translation", "caption", "text")
+LOC_WORDS = ("local", "lang", "i18n", "l10n", "string", "subtitle", "dialog",
+             "translation", "caption", "text")
 LOC_EXTS = {".int", ".lng", ".properties"}
+
+
+def has_localization_hint(rel):
+    parts = [part.lower() for part in Path(rel).parts]
+    return any(word in part for part in parts for word in LOC_WORDS)
+
+
+def sha256_bytes(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def ensure_output_outside_source(path, source_base):
+    absolute = Path(path).absolute()
+    if any(part.is_symlink() for part in (absolute, *absolute.parents)):
+        raise SystemExit(f"Refusing output path with a symbolic-link component: {path}")
+    resolved = path.resolve()
+    base = source_base.resolve()
+    if resolved == base or base in resolved.parents:
+        raise SystemExit(f"Refusing to write output inside the source/game folder: {resolved}")
+    return resolved
+
+
+def atomic_write_text(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if any(part.is_symlink() for part in (path.parent, *path.parent.parents)):
+        raise SystemExit(f"Refusing output parent containing a symbolic link: {path.parent}")
+    handle = tempfile.NamedTemporaryFile("w", encoding="utf-8", newline="", dir=path.parent,
+                                         prefix=".localization-", suffix=".tmp", delete=False)
+    temp_path = Path(handle.name)
+    try:
+        with handle:
+            handle.write(text)
+        os.replace(temp_path, path)
+    finally:
+        if temp_path.exists():
+            temp_path.unlink()
 
 
 def main():
@@ -21,7 +60,8 @@ def main():
     p.add_argument("root", help="game/mod folder (or a single file) to read")
     p.add_argument("--out", default="normalized/strings.json")
     p.add_argument("--files", default="", help="where to write files.json (default: next to --out)")
-    p.add_argument("--include", action="append", default=[], help="glob relative to root, repeatable (e.g. 'Localization/INT/*.int')")
+    p.add_argument("--include", action="append", default=[], help="glob relative to root, repeatable")
+    p.add_argument("--exclude", action="append", default=[], help="glob relative to root, repeatable")
     p.add_argument("--csv-col", default=None, help="CSV/TSV text column (name or index; default: guessed)")
     p.add_argument("--csv-id-col", default=None, help="CSV/TSV column to use as ID (default: row number)")
     p.add_argument("--no-header", action="store_true")
@@ -30,68 +70,112 @@ def main():
     p.add_argument("--source-lang", default="en")
     p.add_argument("--target-lang", default="ar")
     p.add_argument("--max-mb", type=float, default=20.0)
+    p.add_argument("--force", action="store_true", help="replace existing regular output JSON files")
     args = p.parse_args()
 
-    root = Path(args.root).resolve()
+    root_arg = Path(args.root)
+    if root_arg.is_symlink():
+        raise SystemExit("Refusing to extract through a symbolic-link root.")
+    root = root_arg.resolve()
+    if not root.exists() or not (root.is_dir() or root.is_file()):
+        raise SystemExit(f"Not a file or folder: {root}")
     base = root.parent if root.is_file() else root
-    cand = [root] if root.is_file() else [Path(d) / f for d, _, fs in os.walk(root) for f in fs]
-    files = {}
-    entries = []
-    skipped = []
-    for f in sorted(cand):
-        rel = f.relative_to(base).as_posix() if not root.is_file() else f.name
-        ext = f.suffix.lower()
-        if ext not in T.ADAPTERS:
-            continue
-        if args.include:
-            if not any(fnmatch.fnmatch(rel, g) for g in args.include):
-                continue
-        elif not (root.is_file() or ext in LOC_EXTS or any(w in part.lower() for part in rel.split("/")[:-1] for w in LOC_WORDS)):
-            continue
-        if f.stat().st_size > args.max_mb * 1048576:
-            skipped.append(f"{rel} (too big)")
-            continue
-        adapter = T.ADAPTERS[ext]
-        opts = {"delim": "tab" if ext == ".tsv" else "comma", "no_header": args.no_header}
-        if args.csv_col is not None:
-            opts["csv_col"] = args.csv_col
-        if args.csv_id_col is not None:
-            opts["csv_id_col"] = args.csv_id_col
-        if args.json_keys:
-            opts["json_keys"] = args.json_keys
+
+    out_arg = Path(args.out)
+    files_arg = Path(args.files) if args.files else out_arg.parent / "files.json"
+    if out_arg.is_symlink() or files_arg.is_symlink():
+        raise SystemExit("Output files must not be symbolic links.")
+    out = ensure_output_outside_source(out_arg, base)
+    fpath = ensure_output_outside_source(files_arg, base)
+    if out == fpath:
+        raise SystemExit("--out and --files must be different paths.")
+    for target in (out, fpath):
+        if target.exists():
+            if not args.force:
+                raise SystemExit(f"Refusing to overwrite existing output: {target} (use --force to replace regular files).")
+            if target.is_symlink() or not target.is_file():
+                raise SystemExit(f"Refusing to replace non-regular output: {target}")
+    if args.max_mb <= 0:
+        raise SystemExit("--max-mb must be greater than zero.")
+
+    if root.is_file():
+        candidates = [root]
+    else:
+        candidates = []
+        for dpath, dnames, fnames in os.walk(root, followlinks=False):
+            dnames[:] = [d for d in dnames if not (Path(dpath) / d).is_symlink()]
+            for name in fnames:
+                candidates.append(Path(dpath) / name)
+
+    files, entries, skipped = {}, [], []
+    for f in sorted(candidates):
         try:
-            text, codec, bom = T.decode(f.read_bytes())
+            if f.is_symlink():
+                skipped.append(f"{f}: symbolic link")
+                continue
+            rel = f.relative_to(base).as_posix() if not root.is_file() else f.name
+            ext = f.suffix.lower()
+            if ext not in T.ADAPTERS:
+                continue
+            hinted = has_localization_hint(rel)
+            if args.include:
+                selected = any(fnmatch.fnmatch(rel, pattern) for pattern in args.include)
+            elif ext in LOC_EXTS:
+                selected = True
+            else:
+                selected = hinted
+            if any(fnmatch.fnmatch(rel, pattern) for pattern in args.exclude):
+                selected = False
+            if not selected:
+                continue
+            st = f.stat()
+            if st.st_size > args.max_mb * 1048576:
+                skipped.append(f"{rel} (larger than --max-mb)")
+                continue
+            raw = f.read_bytes()
+            text, codec, bom = T.decode(raw)
+            adapter = T.ADAPTERS[ext]
+            opts = {"delim": "tab" if ext == ".tsv" else "comma", "no_header": args.no_header}
+            if args.csv_col is not None:
+                opts["csv_col"] = args.csv_col
+            if args.csv_id_col is not None:
+                opts["csv_id_col"] = args.csv_id_col
+            if args.json_keys:
+                opts["json_keys"] = args.json_keys
             items = T.parse(adapter, text, opts)
         except Exception as ex:
-            skipped.append(f"{rel} ({type(ex).__name__}: {ex})")
+            skipped.append(f"{f}: {type(ex).__name__}: {ex}")
             continue
         if not items:
             continue
-        files[rel] = {"adapter": adapter, "codec": codec, "bom": bom, "opts": opts, "count": len(items)}
+        files[rel] = {"adapter": adapter, "codec": codec, "bom": bom, "opts": opts,
+                      "count": len(items), "size": len(raw), "source_sha256": sha256_bytes(raw)}
         for it in items:
             entries.append({"id": f"{rel}::{it['sid']}", "source_file": rel, "context": "unknown",
                             "original": it["original"], "translation": "", "status": "untranslated"})
 
     if not entries:
-        print("No strings found. Pass --include 'relative/glob' for the files to read, or the format needs a custom adapter.")
+        print("No strings found. Use --include with an explicit relative glob, or the format needs a custom adapter.")
         if skipped:
             print("Skipped:", "; ".join(skipped[:5]))
         raise SystemExit(1)
-    out = Path(args.out)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps({"schema_version": "1.0",
-                               "project": {"game_title": args.title, "source_language": args.source_lang,
-                                           "target_language": args.target_lang},
-                               "entries": entries}, ensure_ascii=False, indent=1), encoding="utf-8")
-    fpath = Path(args.files) if args.files else out.parent / "files.json"
-    fpath.write_text(json.dumps({"root": str(base), "files": files}, ensure_ascii=False, indent=1), encoding="utf-8")
+
+    strings_payload = {"schema_version": "1.0",
+                       "project": {"game_title": args.title, "source_language": args.source_lang,
+                                   "target_language": args.target_lang},
+                       "entries": entries}
+    files_payload = {"root": str(base), "files": files, "integrity": "sha256"}
+    atomic_write_text(out, json.dumps(strings_payload, ensure_ascii=False, indent=1))
+    atomic_write_text(fpath, json.dumps(files_payload, ensure_ascii=False, indent=1))
     print(f"{len(entries)} strings from {len(files)} file(s) -> {out}")
     for rel, info in list(files.items())[:8]:
         print(f"  {rel}: {info['count']} ({info['adapter']}, {info['codec']})")
     if len(files) > 8:
         print(f"  ... +{len(files) - 8} more files (see {fpath.name})")
     if skipped:
-        print(f"Skipped {len(skipped)}: " + "; ".join(skipped[:3]))
+        print(f"Skipped {len(skipped)} item(s); first {min(3, len(skipped))} shown:")
+        for item in skipped[:3]:
+            print(f"  {item}")
 
 
 if __name__ == "__main__":

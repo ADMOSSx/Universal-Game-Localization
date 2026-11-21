@@ -91,8 +91,9 @@ python scripts\selftest.py        # last line: SELFTEST PASSED
 2. **Extract** pulls strings from `.ini .int .properties .lng .json .csv .tsv .txt` into one normalized `strings.json`.
 3. **Batch** splits them into small, ID-stable JSON files grouped by source file.
 4. **Translate** happens in any free chat AI you like, outside the agent. (Or in the agent, if you have tokens to spare.)
-5. **Validate** merges by ID and catches broken placeholders, changed originals, encoding damage and overflow risks.
-6. **Patch** writes translated copies, keeping each file's original encoding, BOM and line endings.
+5. **Resume** uses `resume_batches.py` to create pending-only files after an interrupted or partial translation, preserving original entry IDs and batch filenames.
+6. **Validate** merges by ID and catches broken placeholders, changed originals, encoding damage and overflow risks.
+7. **Patch** writes translated copies, keeping each file's original encoding, BOM and line endings.
 
 ## 🎬 See it run
 
@@ -109,12 +110,13 @@ All in `skills/universal-game-localization/scripts/`, Python standard library on
 | Script | What it does |
 |---|---|
 | `inventory.py` | Read-only audit: extensions, magic bytes, engine hints, localization candidates, fonts, archives |
-| `extract_text.py` | Plain-text formats → `normalized/strings.json` + `files.json` |
-| `split_batches.py` | Batches by count/characters, optional `--group-by source_file`, manifest with hashes |
-| `merge_translations.py` | Merge returned batches by ID (accepts ```json fences; stops on unknown IDs or changed originals) |
+| `extract_text.py` | Plain-text formats → `normalized/strings.json` + `files.json` with source SHA-256 hashes; refuses output inside the game |
+| `split_batches.py` | Batches by count/characters/serialized bytes and heuristic token budget; manifest includes estimates |
+| `resume_batches.py` | Builds pending-only batches from partial returns while preserving original IDs and batch filenames |
+| `merge_translations.py` | Merge returned batches by ID, across several rounds (accepts ```json fences; stops on unknown IDs or changed originals) |
 | `validate_translations.py` | Placeholders/markup, mojibake, whitespace, untranslated text, Arabic checks, length risks |
-| `inject_text.py` | Translated copies + `PATCH_MANIFEST.json` (checksums for a reversible install) |
-| `make_handoff.py` | Builds and verifies a ZIP for another translator/AI (excludes binaries and secrets) |
+| `inject_text.py` | Source-hash verification, safe relative paths, no overwrite by default, translated copies + manifest |
+| `make_handoff.py` | Builds a verified ZIP, skips symlinks and likely secrets, redacts local paths, protects existing folders |
 | `selftest.py` | End-to-end test including byte-for-byte round trips |
 
 ### Supported today
@@ -134,6 +136,10 @@ All in `skills/universal-game-localization/scripts/`, Python standard library on
 ## ⚠️ Limitations
 
 - Binary archives and proprietary formats are **not** extracted by the scripts.
+- Token counts from `split_batches.py` are conservative estimates, not exact model-tokenizer measurements.
+- Extraction refuses to overwrite existing `strings.json` / `files.json` unless `--force` is specified.
+- Patch creation requires source hashes from a fresh extraction; old metadata needs explicit `--allow-unverified-source`.
+- Patch manifests and translated files are protected from accidental overwrite unless `--force` is specified.
 - Arabic display depends on the game's font and text renderer. The skill gives a checklist and test strings, but **only an in-game test proves it works**.
 - Engine detection is hint-based, never 100% certain.
 - Online or multiplayer games with anti-cheat are out of scope; the skill stops and explains.
@@ -202,7 +208,10 @@ npx skills add ADMOSSx/Universal-Game-Localization --skill universal-game-locali
 
 ### الأمان والقانون
 
-- مجلد اللعبة للقراءة فقط، والسكريبتات ترفض الكتابة داخله.
+- مجلد اللعبة للقراءة فقط؛ الاستخراج والحقن يتحققان من المسارات والروابط الرمزية وبصمة SHA-256 للمصدر.
+- إعادة الاستخراج لا تستبدل ملفات `strings.json` و`files.json` الموجودة إلا باستخدام `--force`.
+- إنشاء الباتش لا يستبدل ملفات أو Manifest موجودة افتراضيًا؛ استخدم `--force` فقط بعد مراجعة المسارات.
+- تقدير الـ Tokens تقريبي وليس عددًا دقيقًا من الـ tokenizer الخاص بالموديل.
 - لا تثبيت تلقائي، ولا تشغيل لملفات تنفيذية مجهولة، ولا تجاوز لحماية اللعبة.
 - نصوص اللعبة المستخرجة محمية بحقوق أصحابها: استخدمها لعملك الشخصي ولا تنشرها، والتزم بشروط اللعبة والقوانين المحلية.
 - المشروع غير تابع لـ OpenCode أو Anthropic أو أي ناشر ألعاب.
