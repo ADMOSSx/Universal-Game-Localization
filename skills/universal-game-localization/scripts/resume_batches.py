@@ -120,7 +120,7 @@ def main():
             payload["entries"] = keep
             pending_batches.append((path.name, payload, len(keep)))
 
-    unknown = sorted(completed - original_ids)
+    unknown = sorted(seen_returned - original_ids)
     if unknown:
         raise SystemExit(f"Returned data contains {len(unknown)} ID(s) not present in source batches: {unknown[:10]}")
 

@@ -28,7 +28,7 @@ MAGIC = [
 ]
 LOC_KEYWORDS = ("local", "lang", "i18n", "l10n", "string", "subtitle", "dialog", "translation", "caption", "text")
 LOC_EXTS = {".po", ".pot", ".mo", ".locres", ".locmeta", ".resx", ".resw", ".xliff", ".xlf",
-            ".strings", ".dlstrings", ".ilstrings", ".int", ".lng", ".lang", ".loc", ".tsv",
+            ".strings", ".dlstrings", ".ilstrings", ".ini", ".int", ".lng", ".lang", ".loc", ".tsv",
             ".properties", ".rpy", ".rpyc"}
 FONT_EXTS = {".ttf", ".otf", ".ttc", ".woff", ".woff2", ".fnt", ".fon", ".bmfc"}
 ARCHIVE_EXTS = {".pak", ".ucas", ".utoc", ".vpk", ".pck", ".rpa", ".bsa", ".ba2", ".arc", ".bundle",
