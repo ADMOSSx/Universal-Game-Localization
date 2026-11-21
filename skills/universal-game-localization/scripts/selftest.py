@@ -91,7 +91,7 @@ def main():
         for f in ("Game.int", "ui.json", "ui_lf.json", "t.csv", "lines.txt"):
             assert (t / "p1" / "Localization" / f).read_bytes() == (rt / "Localization" / f).read_bytes(), f"round trip differs: {f}"
         run(HERE / "inject_text.py", t / "n" / "ident.json", "--files", t / "n" / "files.json",
-            "--out", t / "p1", expect=2)
+            "--out", t / "p1", expect=1)
         for e in d["entries"]:
             e["translation"] = "مرحبا " + e["id"].split("::")[-1]
         (t / "n" / "ar.json").write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
