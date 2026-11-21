@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Token efficiency: translator returns are now compact (`id` + `translation`, optional review fields); merge restores unchanged metadata from the normalized source.
+- Token budgeting: `split_batches.py` estimates prompt overhead + input + a configurable response reserve; the manifest records each component.
+- Duplicate reuse: `deduplicate_strings.py` collapses exact repeats only when context, speaker, notes, placeholders, tags, formatting and metadata match; unknown context stays scoped to its source file, and missing source-file information prevents cross-entry reuse.
+- Safe expansion: `expand_translations.py` restores every original ID, verifies the source SHA-256 against the dedupe map, and reuses translations only within mapped groups.
+- Tests: self-test covers response-aware budgets, context-safe deduplication, expansion, source tampering and overwrite protection.
 - New `unity_fonts.py` (optional, needs UnityPy + fonttools): lists Font assets inside `.assets` files and the characters each lacks. `inventory.py` cannot see Unity fonts. Tested on one real `resources.assets`; not part of CI.
 - Docs: Arabic guide now has a Unity legacy-Text section and a donor-font licensing warning; Hollow Knight run recorded in `docs/SUPPORTED_GAMES.md` (partial).
 - Fix: `100% completion` was read as the printf placeholder `% c`, so the validator rejected correct translations (seen on a real Hollow Knight run). Space is no longer accepted as a printf flag.

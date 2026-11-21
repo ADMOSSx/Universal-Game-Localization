@@ -13,7 +13,9 @@ Work one batch at a time and return the same filename with valid UTF-8 JSON.
 3. The batch file(s) I upload (`BATCH_MANIFEST.json` is optional)
 
 ## Hard rules
-- Keep every `id` and every other field unchanged. Do not add/remove entries.
+- Keep every `id`; do not add, remove, rename or combine entries.
+- Return compact JSON: each entry contains only `id` and `translation`; include `status: "needs_review"` and `notes` only when needed.
+- Do NOT repeat `original` or other source metadata. The merge script restores unchanged fields from the normalized source.
 - Keep placeholders, tags, variables, escape sequences and line breaks exactly (`{0}`, `%s`, `<b>`, `\n`, `[NAME]`).
 - Output normal Arabic text (logical Unicode order). Do NOT pre-shape letters or add invisible direction characters.
 - If unsure, add a short question in `notes` and set `"status": "needs_review"`.
