@@ -227,6 +227,8 @@ def main():
         run(HERE / "make_handoff.py", ws)
         assert (ws / "HANDOFF_PACKAGE.zip").exists()
         assert (ws / "HANDOFF_PACKAGE" / "scripts" / "resume_batches.py").is_file()
+        assert (ws / "HANDOFF_PACKAGE" / "scripts" / "deduplicate_strings.py").is_file()
+        assert (ws / "HANDOFF_PACKAGE" / "scripts" / "expand_translations.py").is_file()
         assert (ws / "HANDOFF_PACKAGE" / "ADMOSS_HANDOFF_PACKAGE.json").is_file()
         copied_project = (ws / "HANDOFF_PACKAGE" / "reports" / "PROJECT.md").read_text(encoding="utf-8")
         assert "SecretGame" not in copied_project and "<LOCAL_PATH_REDACTED>" in copied_project
