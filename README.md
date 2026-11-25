@@ -213,7 +213,7 @@ Version **1.3.0** expands the translation workflow and hardens Manual Handoff:
 - **Provider-neutral instructions:** upload instructions work with ChatGPT, Claude or another chat AI. The chosen service's own usage, context and upload limits still apply.
 - **Godot format clarification:** <code>.po</code> / <code>.pot</code> files can be identified as localization candidates, but the core extractor does not yet parse gettext PO files. A dedicated adapter or verified conversion is required.
 
-The v1.3.0 package is released only after the automated integrity and test matrix succeeds. See the [release](https://github.com/ADMOSSx/Universal-Game-Localization/releases/tag/v1.4.0) and [verification workflow](https://github.com/ADMOSSx/Universal-Game-Localization/actions/runs/45677375778). Full history: [CHANGELOG](CHANGELOG.md).
+The v1.3.0 package is released only after the automated integrity and test matrix succeeds. See the [release](https://github.com/ADMOSSx/Universal-Game-Localization/releases/tag/v1.3.0) and [verification workflow](https://github.com/ADMOSSx/Universal-Game-Localization/actions/runs/45677375778). Full history: [CHANGELOG](CHANGELOG.md).
 
 </details>
 
@@ -618,7 +618,7 @@ npx skills add ADMOSSx/Universal-Game-Localization --skill universal-game-locali
 
 بعد التثبيت افتح Session جديدة في OpenCode.
 
-**التحديث اليدوي:** نزّل [ملف الإصدار v1.3.0](https://github.com/ADMOSSx/Universal-Game-Localization/releases/download/v1.4.0/universal-game-localization-1.4.0.zip)، وفك الضغط، واستبدل مجلد الـ skill القديم بالمجلد الجديد بالكامل. ما تنسخش <code>SKILL.md</code> لوحده؛ لازم السكريبتات والمراجع والقوالب كمان.
+**التحديث اليدوي:** نزّل [ملف الإصدار v1.4.0](https://github.com/ADMOSSx/Universal-Game-Localization/releases/download/v1.4.0/universal-game-localization-1.4.0.zip)، وفك الضغط، واستبدل مجلد الـ skill القديم بالمجلد الجديد بالكامل. ما تنسخش <code>SKILL.md</code> لوحده؛ لازم السكريبتات والمراجع والقوالب كمان.
 
 ### 🏁 بداية سريعة
 
