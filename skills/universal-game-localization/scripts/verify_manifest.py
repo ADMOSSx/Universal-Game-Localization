@@ -9,6 +9,8 @@ MANIFEST=ROOT/"MANIFEST.sha256"
 
 def skipped(path:Path)->bool:
     """Bytecode caches are build artefacts, never part of the package."""
+    if path.is_symlink():
+        return False
     return "__pycache__" in path.relative_to(ROOT).parts or path.suffix==".pyc"
 
 def main()->int:
@@ -21,8 +23,12 @@ def main()->int:
     if args.write:
         entries=[]
         for path in sorted(ROOT.rglob("*")):
-            if path==MANIFEST or path.is_dir() or skipped(path): continue
-            if path.is_symlink() or not path.is_file():
+            if path==MANIFEST or skipped(path): continue
+            if path.is_symlink():
+                print(f"unsafe entry: {path.relative_to(ROOT)}",file=sys.stderr)
+                return 1
+            if path.is_dir(): continue
+            if not path.is_file():
                 print(f"unsafe entry: {path.relative_to(ROOT)}",file=sys.stderr)
                 return 1
             digest=hashlib.sha256(path.read_bytes()).hexdigest()
@@ -50,9 +56,13 @@ def main()->int:
     actual=set()
     errors=[]
     for path in ROOT.rglob("*"):
-        if path==MANIFEST or path.is_dir() or skipped(path): continue
+        if path==MANIFEST or skipped(path): continue
         rel=path.relative_to(ROOT).as_posix()
-        if path.is_symlink() or not path.is_file():
+        if path.is_symlink():
+            errors.append(f"unsafe entry: {rel}")
+            continue
+        if path.is_dir(): continue
+        if not path.is_file():
             errors.append(f"unsafe entry: {rel}")
             continue
         actual.add(rel)
