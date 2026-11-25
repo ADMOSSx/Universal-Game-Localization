@@ -1,10 +1,32 @@
 # Changelog
 
+## 1.3.0 — 2026-11-25
+- Added a translator-choice step: current agent/model or provider-neutral Manual Handoff.
+- Hardened handoff preflight against missing, modified, incomplete or mismatched translation batches and source hashes.
+- Improved handoff privacy by redacting the batch manifest's local source path and excluding files not listed in the verified batch manifest.
+- Added provider-neutral instructions, upload/return/resume guidance, rendered language metadata and an automatic translator guide fallback. The ZIP excludes normalized full-source files, reports and local scripts.
+- Clarified that Godot .po files are detectable but are not yet supported by the core text extractor.
+- Added end-to-end regression tests for handoff validation, ZIP contents, path redaction and placeholder rendering.
+
+
+## 1.2.0 — 2026-11-25
+
+- Structured read-only adapters for Unity, Unreal Engine 3/4/5 and Godot.
+- Engine-specific localization candidates, runtime clues, safe next steps and regression tests.
+- Checksum-manifest verification and automated installable release packaging.
+
 ## Unreleased
+- Fix: `arabic_lint.py` reported a literal `\n` before Arabic as `mixed-latin` (bad lookbehind).
+- Fix: `arabic_lint.py` now uses the validator's token regex (`%1$s`, `%.2f`, `[NAME]`, `${x}`, BBCode).
+- Fix: `validate_translations.py --source` takes `original` from the source for compact replies.
+- Fix: `verify_manifest.py` ignores `__pycache__` / `*.pyc`.
+- Fix: `extract_text.py` no longer treats `Textures/` or `Context/` as localization paths.
+- Fix: `make_handoff.py` no longer aborts when game dialogue looks like a credential.
+- CI: publishing skips (instead of failing) when the release exists; notes come from CHANGELOG.
+- Docs: README gets a quick start (with a verified 8-command pipeline), project status, FAQ, a flow diagram and a complete nav; collapsed sections lose their duplicate headings.
 - Batches are slim and compact by default (`--full` / `--pretty` to opt out): on 100 real Hollow Knight strings the batch went from 50.4 to 15.4 KB and the compact return is 82% smaller than echoing every field.
 - New `status.py`: progress and the next command in a few lines (resume after a limit runs out).
 - `SKILL.md` shortened from 7.3 to 5.3 KB; `--token-budget` removed from the default example (a small budget on a 5000-string game gave 625 batches instead of 50).
-- `make_handoff.py` also ships `_batchio.py`, which the shipped scripts now import.
 - Fix: deduplication compared the whole `metadata` object, so entries carrying a per-entry key (as an extractor for Unity sheets does) never matched: 0 of 2119 real Hollow Knight entries collapsed, although 215 exact repeats exist among the translatable ones. Only `metadata.max_*` limits now count, as documented. Maps made by the old code must be regenerated (the fingerprint changed).
 - Token efficiency: translator returns are now compact (`id` + `translation`, optional review fields); merge restores unchanged metadata from the normalized source.
 - Token budgeting: `split_batches.py` estimates prompt overhead + input + a configurable response reserve; the manifest records each component.

@@ -6,20 +6,27 @@ import fnmatch
 import hashlib
 import json
 import os
+import re
 import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _textio as T
 
-LOC_WORDS = ("local", "lang", "i18n", "l10n", "string", "subtitle", "dialog",
-             "translation", "caption", "text")
+LOC_WORDS = ("local", "lang", "i18n", "l10n", "subtitle", "dialog", "translation", "caption")
+# Generic words must be a whole token, otherwise Textures/ or Context/ would match "text".
+LOC_TOKENS = {"string", "strings", "text", "texts"}
 LOC_EXTS = {".int", ".lng", ".properties"}
 
 
 def has_localization_hint(rel):
-    parts = [part.lower() for part in Path(rel).parts]
-    return any(word in part for part in parts for word in LOC_WORDS)
+    for part in Path(rel).parts:
+        low = part.lower()
+        if any(word in low for word in LOC_WORDS):
+            return True
+        if LOC_TOKENS & set(re.split(r"[^a-z0-9]+", low)):
+            return True
+    return False
 
 
 def sha256_bytes(data):

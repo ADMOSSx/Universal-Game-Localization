@@ -3,7 +3,8 @@
 Run:  python scripts/selftest.py
 """
 from pathlib import Path
-import json, re, subprocess, sys, tempfile
+import os
+import json, re, subprocess, sys, tempfile, zipfile
 
 HERE = Path(__file__).resolve().parent
 PY = sys.executable
@@ -13,7 +14,9 @@ import split_batches as B
 
 
 def run(*args, expect=0):
-    r = subprocess.run([PY, *map(str, args)], capture_output=True, text=True, encoding="utf-8")
+    if os.environ.get("SELFTEST_VERBOSE") == "1":
+        print("TEST:", " ".join(map(str, args[:5])), flush=True)
+    r = subprocess.run([PY, *map(str, args)], capture_output=True, text=True, encoding="utf-8", timeout=90)
     assert r.returncode == expect, f"{args[0]} exit {r.returncode} (expected {expect})\n{r.stdout}\n{r.stderr}"
     return r.stdout
 
@@ -36,7 +39,7 @@ def main():
         entries = [{"id": f"e{i:03d}", "source_file": f"f{i % 3}.int", "context": "menu", "original": f"Hello {{0}} item {i}\n",
                     "translation": "", "status": "untranslated", "metadata": {}} for i in range(25)]
         src = ws / "normalized" / "strings.json"; src.parent.mkdir(parents=True)
-        src.write_text(json.dumps({"schema_version": "1.0", "project": {"target_language": "ar"}, "entries": entries}), encoding="utf-8")
+        src.write_text(json.dumps({"schema_version": "1.0", "project": {"game_title": "Selftest Game", "source_language": "en", "target_language": "ar"}, "entries": entries}), encoding="utf-8")
         batches = ws / "translation_batches"
         run(HERE / "split_batches.py", src, "--out", batches, "--size", "10", "--group-by", "source_file")
         run(HERE / "split_batches.py", src, "--out", batches, "--size", "10", expect=1)  # refuses to overwrite
@@ -228,15 +231,56 @@ def main():
         arbitrary_zip = t / "custom.zip"; arbitrary_zip.write_text("keep me", encoding="utf-8")
         run(HERE / "make_handoff.py", ws, "--force", "--out", t / "custom", expect=1)
         assert arbitrary_zip.read_text(encoding="utf-8") == "keep me"
+        # Empty workspaces must never produce a misleading, empty handoff ZIP.
+        empty_ws = t / "empty-handoff"; empty_ws.mkdir()
+        run(HERE / "make_handoff.py", empty_ws, expect=1)
+        assert not (empty_ws / "HANDOFF_PACKAGE.zip").exists()
+
+        # A batch not declared in the manifest is never copied into the external package.
+        (batches / "UNEXPECTED.txt").write_text("local note that must stay local", encoding="utf-8")
         run(HERE / "make_handoff.py", ws)
-        assert (ws / "HANDOFF_PACKAGE.zip").exists()
-        assert (ws / "HANDOFF_PACKAGE" / "scripts" / "resume_batches.py").is_file()
-        assert (ws / "HANDOFF_PACKAGE" / "scripts" / "_batchio.py").is_file()
-        assert (ws / "HANDOFF_PACKAGE" / "scripts" / "deduplicate_strings.py").is_file()
-        assert (ws / "HANDOFF_PACKAGE" / "scripts" / "expand_translations.py").is_file()
-        assert (ws / "HANDOFF_PACKAGE" / "ADMOSS_HANDOFF_PACKAGE.json").is_file()
-        copied_project = (ws / "HANDOFF_PACKAGE" / "reports" / "PROJECT.md").read_text(encoding="utf-8")
-        assert "SecretGame" not in copied_project and "<LOCAL_PATH_REDACTED>" in copied_project
+        package = ws / "HANDOFF_PACKAGE"
+        package_zip = ws / "HANDOFF_PACKAGE.zip"
+        assert package_zip.exists()
+        assert (package / "translator" / "GUIDE.md").is_file()
+        assert (package / "ADMOSS_HANDOFF_PACKAGE.json").is_file()
+        assert not (package / "translation_batches" / "UNEXPECTED.txt").exists()
+        # The external translator receives neither the complete normalized corpus nor local reports/scripts.
+        assert not (package / "normalized").exists()
+        assert not (package / "reports").exists()
+        assert not (package / "scripts").exists()
+
+        # Provider and language placeholders are rendered; private absolute paths are removed.
+        instructions = (package / "MASTER_INSTRUCTIONS.md").read_text(encoding="utf-8")
+        assert "{SOURCE_LANGUAGE}" not in instructions and "{TARGET_LANGUAGE}" not in instructions
+        assert "from en to ar" in instructions
+        readme = (package / "README_FIRST.md").read_text(encoding="utf-8")
+        assert "Selftest Game" in readme and "en" in readme and "ar" in readme
+        packaged_batches = json.loads((package / "translation_batches" / "BATCH_MANIFEST.json").read_text(encoding="utf-8"))
+        assert packaged_batches["input"] == "<LOCAL_PATH_REDACTED>"
+        expected_batch_names = {item["file"] for item in manifest["batches"]}
+        packaged_batch_names = {
+            path.name for path in (package / "translation_batches").iterdir()
+            if re.fullmatch(r"batch_\d{4}\.json", path.name)
+        }
+        assert packaged_batch_names == expected_batch_names, (packaged_batch_names, expected_batch_names)
+        with zipfile.ZipFile(package_zip) as archive:
+            assert archive.testzip() is None
+            members = archive.namelist()
+            assert any(name.endswith("translator/GUIDE.md") for name in members)
+            assert not any("/normalized/" in name or "/reports/" in name or "/scripts/" in name for name in members)
+
+        # Tampered batches must fail preflight and must not create a new package.
+        original_batch = (batches / "batch_0001.json").read_bytes()
+        try:
+            (batches / "batch_0001.json").write_bytes(original_batch + b" ")
+            tampered_out = t / "tampered-handoff"
+            run(HERE / "make_handoff.py", ws, "--out", tampered_out, expect=1)
+            assert not tampered_out.exists() and not tampered_out.with_suffix(".zip").exists()
+        finally:
+            (batches / "batch_0001.json").write_bytes(original_batch)
+
+        # Existing verified packages can be refreshed, but arbitrary ZIPs cannot.
         run(HERE / "make_handoff.py", ws, "--force")
         # --- multi-round resume + merge: round 2 reuses the SAME filenames and must not erase round 1 ---
         mr = t / "mr"; (mr / "n").mkdir(parents=True)
@@ -324,6 +368,41 @@ def main():
         assert "Done: 21" in out and "needs_review: 4" in out and "not returned/blank: 5" in out, out
         out = run(HERE / "status.py", t, "--batches", mr / "b", "--returned", r1, r2)
         assert "Everything translated" in out, out
+
+        # --- regression: lint/validator/extractor fixes ---
+        lint_nl = t / "lint_nl.json"
+        lint_nl.write_text(json.dumps({"entries": [{"id": "n1", "original": "Line one\\nLine two",
+                                                      "translation": "سطر أول\\nسطر ثانٍ"}]},
+                                      ensure_ascii=False), encoding="utf-8")
+        run(HERE / "arabic_lint.py", lint_nl)          # literal \n before Arabic is not mixed-latin
+
+        def lint_case(name, translation, expect):
+            case = t / name
+            case.write_text(json.dumps({"entries": [{"id": "k", "original": "Value %.2f",
+                                                      "translation": translation}]},
+                                       ensure_ascii=False), encoding="utf-8")
+            run(HERE / "arabic_lint.py", case, expect=expect)
+        lint_case("lt_ok.json", "القيمة %.2f", 0)
+        lint_case("lt_bad.json", "القيمة", 1)          # %.2f dropped: shared token regex catches it
+
+        cs_src = t / "cs_src.json"
+        cs_src.write_text(json.dumps({"project": {"target_language": "ar"}, "entries": [
+            {"id": "c1", "original": "Press {0} <b>now</b>", "translation": ""}]}), encoding="utf-8")
+        cs_ret = t / "cs_ret.json"
+        cs_ret.write_text(json.dumps({"entries": [{"id": "c1", "translation": "اضغط {0} <b>الآن</b>"}]},
+                                     ensure_ascii=False), encoding="utf-8")
+        run(HERE / "validate_translations.py", cs_ret, "--source", cs_src, "--lang", "ar",
+            "--report", t / "cs.txt")                  # compact reply: original comes from the source
+
+        hg = t / "hint-game"; (hg / "Textures").mkdir(parents=True); (hg / "Strings").mkdir()
+        (hg / "Textures" / "atlas.json").write_text('{"name":"Hello there"}', encoding="utf-8")
+        run(HERE / "extract_text.py", hg, "--out", t / "hn" / "strings.json", expect=1)   # Textures/ is noise
+        (hg / "Strings" / "ui.json").write_text('{"title":"Main Menu"}', encoding="utf-8")
+        out = run(HERE / "extract_text.py", hg, "--out", t / "hn" / "strings.json")
+        assert "1 strings from 1 file(s)" in out, out
+
+        # --- fast regression suite for the reverse-mode helpers ---
+        run(HERE / "selftest_legacy.py")
 
     print("SELFTEST PASSED")
 

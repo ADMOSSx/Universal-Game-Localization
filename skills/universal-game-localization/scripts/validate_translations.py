@@ -113,6 +113,7 @@ def main():
         if count > 1:
             errors["Duplicate IDs"].append(value)
 
+    source_map = {}
     if args.source:
         try:
             source = json.loads(Path(args.source).read_text(encoding="utf-8-sig"))
@@ -140,7 +141,9 @@ def main():
     translated = 0
     for entry in entries:
         eid = entry.get("id")
-        orig_value = entry.get("original", "")
+        # compact translator replies carry no "original": take it from the source file
+        orig_value = (entry["original"] if "original" in entry
+                      else source_map.get(eid, {}).get("original", ""))
         trans_value = entry.get("translation", "")
         if not isinstance(orig_value, str):
             errors["Non-string original values"].append(eid)
