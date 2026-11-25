@@ -259,7 +259,10 @@ def main():
         packaged_batches = json.loads((package / "translation_batches" / "BATCH_MANIFEST.json").read_text(encoding="utf-8"))
         assert packaged_batches["input"] == "<LOCAL_PATH_REDACTED>"
         expected_batch_names = {item["file"] for item in manifest["batches"]}
-        packaged_batch_names = {path.name for path in (package / "translation_batches").glob("batch_*.json")}
+        packaged_batch_names = {
+            path.name for path in (package / "translation_batches").iterdir()
+            if re.fullmatch(r"batch_\d{4}\.json", path.name)
+        }
         assert packaged_batch_names == expected_batch_names, (packaged_batch_names, expected_batch_names)
         with zipfile.ZipFile(package_zip) as archive:
             assert archive.testzip() is None
