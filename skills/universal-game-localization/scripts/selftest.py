@@ -258,7 +258,9 @@ def main():
         assert "Selftest Game" in readme and "en" in readme and "ar" in readme
         packaged_batches = json.loads((package / "translation_batches" / "BATCH_MANIFEST.json").read_text(encoding="utf-8"))
         assert packaged_batches["input"] == "<LOCAL_PATH_REDACTED>"
-        assert len(list((package / "translation_batches").glob("batch_*.json"))) == 3
+        expected_batch_names = {item["file"] for item in manifest["batches"]}
+        packaged_batch_names = {path.name for path in (package / "translation_batches").glob("batch_*.json")}
+        assert packaged_batch_names == expected_batch_names, (packaged_batch_names, expected_batch_names)
         with zipfile.ZipFile(package_zip) as archive:
             assert archive.testzip() is None
             members = archive.namelist()
