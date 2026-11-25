@@ -323,7 +323,7 @@ def project_values(project, manifest):
     return {
         "GAME_TITLE": project.get("game_title") or "Unknown game",
         "GAME_VERSION": project.get("game_version") or "Unknown",
-        "ENGINE": project.get("engine") or "See project report",
+        "ENGINE": project.get("engine") or "Not recorded",
         "SOURCE_LANGUAGE": project.get("source_language") or "Unknown",
         "TARGET_LANGUAGE": project.get("target_language") or "Unknown",
         "BATCH_COUNT": manifest.get("total_batches", len(manifest.get("batches", []))),
@@ -425,6 +425,17 @@ def main():
                         if not sanitize_project_paths(destination):
                             raise SystemExit(f"Could not safely sanitize local paths in {rel}")
                     copied.append(rel.as_posix())
+
+        expected_batch_names = {item["file"] for item in batch_manifest["batches"]}
+        copied_batch_names = {
+            PurePosixPath(name).name for name in copied
+            if name.startswith("translation_batches/") and BATCH_RE.fullmatch(PurePosixPath(name).name)
+        }
+        if copied_batch_names != expected_batch_names:
+            missing = sorted(expected_batch_names - copied_batch_names)
+            raise SystemExit(f"Refusing to create an incomplete handoff package; declared batches excluded: {missing}")
+        if "translation_batches/BATCH_MANIFEST.json" not in copied:
+            raise SystemExit("Refusing to create a handoff package without its batch manifest.")
 
         guide_source = workspace / "translator" / "GUIDE.md"
         guide_path = staged / "translator" / "GUIDE.md"
