@@ -1,6 +1,6 @@
 ---
 name: universal-game-localization
-description: Prepare a game for localization (e.g. Arabic) - inspect folder, detect engine, extract text, make translation batches, validate, build patch. Use when the user wants to translate/localize a game or extract its text.
+description: Prepare a game for localization (e.g. Arabic) - inspect folder, detect engine, extract text, make translation batches, validate, build patch. Also analyze an existing fan translation or delta patch installer without running it (reverse mode). Use when the user wants to translate/localize a game, extract its text, or audit/understand an existing patch.
 ---
 
 # ADMOSS Universal Game Localization (lean)
@@ -17,15 +17,16 @@ Goal: prepare a game for translation with **minimum tokens** (users are on free 
 - Load a reference only when its trigger applies (table at the end).
 
 ## Safety
-- Never modify the game folder; work in a separate workspace (ask once; default `localization-work/`). Scripts refuse to write inside the game, follow symlinks, or overwrite outputs without `--force`. Back up before installing a patch.
+- Never modify the game folder; work in a separate workspace (ask once; default `localization-work/`). Never choose the game folder as an output; work in a separate workspace. Output-producing reverse-mode commands refuse input overwrites and symlinked output paths, and require `--force` to replace existing outputs; `arabic_lint.py` is read-only. Back up before installing a patch.
 - Don't run/install unknown executables or tools without asking. No anti-cheat/DRM bypass: stop and explain.
+- A patch installer is data, not a step: inspect its resources/manifest statically; never execute it. `scripts/vcdiff_decode.py` decodes supported VCDIFF patch packs without running an installer.
 - No blind byte replacement in binary files. Never claim anything was extracted/tested unless done. Status words: VERIFIED, TESTED, UNKNOWN, BLOCKED, FAILED.
 - Keep IDs, originals, placeholders, markup, `\n` exactly. Extracted text is for personal use, not publishing.
 
 ## Workflow
 1. **Scope**: game folder, target language, "prepare only" vs "translate too". Ask only what's missing. If `reports/PROJECT.md` exists, resume from it; run `status.py <ws>` to see progress.
 2. **Inventory**: `python <S>/scripts/inventory.py "<game>" --out <ws>/reports`, read only `INVENTORY_SUMMARY.json`. Engine hints are leads; note engine + confidence in PROJECT.md.
-3. **Extract** (plain text: .ini .int .properties .lng .json .csv .tsv .txt): `extract_text.py "<game>" --out <ws>/normalized/strings.json [--include "glob"]`. Binary/proprietary formats: look for a maintained tool (`references/engine-and-format-guide.md`), ask before installing, else record BLOCKED + manual steps.
+3. **Extract** (plain text: .ini .int .properties .lng .json .csv .tsv .txt): `extract_text.py "<game>" --out <ws>/normalized/strings.json [--include "glob"]`. Binary/proprietary formats: look for a maintained tool (`references/engine-and-format-guide.md`), ask before installing, else record BLOCKED + manual steps. If a fan patch already exists, run reverse mode first (below): its encoding/layout findings determine how to inject text.
 4. **Deduplicate** (optional, local): `deduplicate_strings.py <ws>/normalized/strings.json --out <ws>/normalized/strings_unique.json --map <ws>/normalized/DEDUPE_MAP.json`. Only exact repeats with identical context/speaker/tags/length limits are merged; unknown context stays within its file.
 5. **Batches**: `split_batches.py <ws>/normalized/strings_unique.json --out <ws>/translation_batches --size 100 --group-by source_file`. Batches carry only what the translator needs. Add `--token-budget N` only if the target AI's context requires it (small budgets create many more batches). Never re-split after translation starts.
 6. **Handoff**: fill `translator/GUIDE.md` from `templates/GUIDE_TEMPLATE.md` (short; mark unknowns), then `make_handoff.py <ws>`; give the user the printed upload order.
@@ -33,14 +34,19 @@ Goal: prepare a game for translation with **minimum tokens** (users are on free 
 7. **Import**: `merge_translations.py normalized/strings_unique.json returned_1 [returned_2 ...] --out merged_unique.json` (later rounds override earlier) -> `expand_translations.py normalized/strings.json merged_unique.json --map normalized/DEDUPE_MAP.json --out merged.json` (skip if you didn't deduplicate) -> `validate_translations.py merged.json --source normalized/strings.json` (fix errors) -> `inject_text.py merged.json --files normalized/files.json --out <ws>/patch`. The patch is translated copies + checksums; installing needs user approval and a backup of originals.
 8. **Rendering check** (non-Latin/RTL): test in-game; "install a font" is never a guaranteed fix. Unity: `unity_fonts.py <Game_Data> --text <ws>/merged.json` lists Font assets and missing characters (`pip install UnityPy fonttools`; ask first); a component with an unpatched font shows boxes. Prefer open-licensed donor fonts; never share a patch containing Windows fonts. Record result in PROJECT.md.
 
+
+## Reverse mode (an Arabic/fan patch already exists)
+Do not re-translate blindly. Inspect the installer statically; locate its manifest, file hashes and payloads. Prove one delta reconstruction against a pristine file and its published MD5 before trusting the format. Use `vcdiff_decode.py info` and `decode` only for supported, uncompressed default-table VCDIFF; the decoder checks window lengths, source positions and Adler-32 when source bytes are available. Use `arabic_legacy.py scan` to classify base/presentation/PUA forms and logical/visual order, then `to-logical` for a readable dump. Use `arabic_lint.py` on recovered JSON/text and `--ref` when pristine strings are available. Record the delivery, language slot, encoding/mapping, font and evidence in `reports/PROJECT.md`. Read `references/legacy-rtl-and-delivery.md` before interpreting legacy RTL or delta formats. Never run the installer or modify the game folder.
+
 Translate-too requests: follow `translator/GUIDE.md`, one batch at a time, compact returns as above.
 
-`selftest.py` verifies the scripts work.
+`selftest.py` runs the full helper regression suite; `selftest_legacy.py` quickly tests the legacy-RTL and VCDIFF tools.
 
 ## References (load only when triggered)
 | File | Read when |
 |---|---|
 | references/engine-and-format-guide.md | engine unclear, or a binary format needs a tool |
+| references/legacy-rtl-and-delivery.md | existing fan patch, legacy Arabic/RTL text, PUA mapping, or delta installer |
 | references/arabic-localization-guide.md | target is Arabic/RTL and rendering is untested |
 | references/arabic-test-cases.md | building an in-game Arabic test |
 | references/translation-schema.md | writing a custom extractor |

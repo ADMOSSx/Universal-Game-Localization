@@ -3,6 +3,7 @@
 Run:  python scripts/selftest.py
 """
 from pathlib import Path
+import os
 import json, re, subprocess, sys, tempfile
 
 HERE = Path(__file__).resolve().parent
@@ -13,7 +14,9 @@ import split_batches as B
 
 
 def run(*args, expect=0):
-    r = subprocess.run([PY, *map(str, args)], capture_output=True, text=True, encoding="utf-8")
+    if os.environ.get("SELFTEST_VERBOSE") == "1":
+        print("TEST:", " ".join(map(str, args[:5])), flush=True)
+    r = subprocess.run([PY, *map(str, args)], capture_output=True, text=True, encoding="utf-8", timeout=90)
     assert r.returncode == expect, f"{args[0]} exit {r.returncode} (expected {expect})\n{r.stdout}\n{r.stderr}"
     return r.stdout
 
@@ -324,6 +327,9 @@ def main():
         assert "Done: 21" in out and "needs_review: 4" in out and "not returned/blank: 5" in out, out
         out = run(HERE / "status.py", t, "--batches", mr / "b", "--returned", r1, r2)
         assert "Everything translated" in out, out
+
+        # --- fast regression suite for the reverse-mode helpers ---
+        run(HERE / "selftest_legacy.py")
 
     print("SELFTEST PASSED")
 
