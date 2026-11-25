@@ -1,0 +1,58 @@
+name: Publish Universal Game Localization v1.1.0
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dist/ugl-v1.1.0-payload-*.b64'
+      - '.github/workflows/.publish-v1.1.0.yml'
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild and verify release payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat dist/ugl-v1.1.0-payload-*.b64 > /tmp/payload.b64
+          base64 --decode /tmp/payload.b64 > /tmp/payload.tar.xz
+          echo 'b60b27369e5df05e9423bda3e7569ad24aba4958c2764f40d9b9ca9701d9ae0e  /tmp/payload.tar.xz' | sha256sum --check -
+          mkdir -p /tmp/ugl-payload
+          tar -xJf /tmp/payload.tar.xz -C /tmp/ugl-payload
+          test -f /tmp/ugl-payload/universal-game-localization/SKILL.md
+          test "$(cat /tmp/ugl-payload/universal-game-localization/VERSION)" = '1.1.0'
+          mkdir -p skills/universal-game-localization
+          cp -a /tmp/ugl-payload/universal-game-localization/. skills/universal-game-localization/
+          rm -rf dist
+          rm -f .github/workflows/.publish-v1.1.0.yml
+          cd skills/universal-game-localization
+          sha256sum --check MANIFEST.sha256
+          python -m compileall -q scripts
+          python scripts/selftest_legacy.py
+      - name: Commit v1.1.0 skill files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A skills/universal-game-localization dist .github/workflows/.publish-v1.1.0.yml
+          if git diff --cached --quiet; then
+            echo 'No release changes detected' 
+            exit 1
+          fi
+          git commit -m 'Release Universal Game Localization v1.1.0'
+          git push origin HEAD:main
+          git fetch origin main
+          git checkout --detach origin/main
+      - name: Build installable ZIP and publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd skills
+          zip -qr "$GITHUB_WORKSPACE/universal-game-localization-v1.1.0.zip" universal-game-localization
+          cd "$GITHUB_WORKSPACE"
+          gh release create v1.1.0 universal-game-localization-v1.1.0.zip --title 'Universal Game Localization v1.1.0' --notes 'Universal Game Localization skill update. Includes reverse-analysis mode, legacy Arabic/RTL helpers, JSON lint improvements, a conservative VCDIFF decoder, output safety checks, and focused regression tests. The skill remains engine-agnostic; Outlast assets are excluded from the installable package. VCDIFF support is intentionally limited to version-0 default-code-table uncompressed windows. The focused reverse-mode tests and manifest verification run before publication. The historical full selftest did not complete in the packaging environment and is not represented as passing.'
