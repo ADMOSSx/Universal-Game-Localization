@@ -26,7 +26,7 @@ UE3 .int files may be plain text and can be handled by the core extractor if the
 
 ## Godot
 
-Recognizes project.godot and PCK files with the GDPC magic header. For an editable project, it reports a project name/version clue (when present) and localization candidates such as .po, .pot, .csv, .json, .tres and .tscn in locale/translation folders. A visible project.godot generally indicates project/source layout; a PCK indicates an exported resource pack. Some exported games embed their PCK in the executable, so a missing sidecar PCK does not rule out Godot.
+Recognizes project.godot and PCK files with the GDPC magic header. For an editable project, it reports a project name/version clue (when present) and localization candidates such as .po, .pot, .csv, .json, .tres and .tscn in locale/translation folders. A visible project.godot generally indicates project/source layout; a PCK indicates an exported resource pack. Some exported games embed their PCK in the executable, so a missing sidecar PCK does not rule out Godot. Important: .po/.pot are reported as localization candidates, but the core text extractor does not yet parse gettext PO files; use a dedicated gettext adapter or verified conversion before batching.
 
 The core extractor can process supported plain-text formats, but it does not unpack .pck or decode Godot .translation resources. Preserve resource identifiers, UIDs and paths; translate only identified user-facing fields.
 

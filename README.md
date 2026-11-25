@@ -91,10 +91,11 @@ python scripts\selftest.py        # last line: SELFTEST PASSED
 2. **Extract** pulls strings from `.ini .int .properties .lng .json .csv .tsv .txt` into one normalized `strings.json`.
 3. **Deduplicate** collapses exact repeated strings only when context, speaker, tags, formatting and length constraints match. Unknown context is scoped to its source file.
 4. **Batch** splits unique entries into small, ID-stable JSON files. The token budget includes prompt overhead and a reserved response estimate.
-5. **Translate** happens in any free chat AI you like, outside the agent. The translator returns only `id` + `translation` (and optional review notes), not the full source metadata.
-6. **Resume** uses `resume_batches.py` to create pending-only files after an interrupted or partial translation, preserving IDs and batch filenames.
-7. **Expand + validate** restores duplicate IDs from a SHA-256-bound map, then checks placeholders, markup, changed originals, encoding damage and overflow risks.
-8. **Patch** writes translated copies, keeping each file's original encoding, BOM and line endings.
+5. **Choose the translator**: use the current agent/model, or choose Manual Handoff to translate through a chat AI you can access. Manual Handoff is recommended when you want to save the current agent's free quota. The ZIP excludes reports, the normalized full-source corpus, local helper scripts and game files.
+6. **Manual Handoff (optional)** builds a validated ZIP with only declared translation batches and instructions. Upload selected batch files to ChatGPT, Claude or another chat AI; return the JSON files locally. No API key, paid API or provider connection is required. The chosen chat service's own free-tier and upload limits still apply.
+7. **Resume** uses `resume_batches.py` to create pending-only files after an interrupted or partial translation, preserving IDs and batch filenames.
+8. **Expand + validate** restores duplicate IDs from a SHA-256-bound map, then checks placeholders, markup, changed originals, encoding damage and overflow risks.
+9. **Patch** writes translated copies, keeping each file's original encoding, BOM and line endings.
 
 ## 🎬 See it run
 
@@ -122,7 +123,7 @@ All in `skills/universal-game-localization/scripts/`, Python standard library on
 | `expand_translations.py` | Reuses representative translations for duplicate IDs and restores the original normalized dataset |
 | `validate_translations.py` | Placeholders/markup, mojibake, whitespace, untranslated text, Arabic checks, length risks |
 | `inject_text.py` | Source-hash verification, safe relative paths, no overwrite by default, translated copies + manifest |
-| `make_handoff.py` | Builds a verified ZIP, skips symlinks and likely secrets, redacts local paths, protects existing folders |
+| `make_handoff.py` | Validates source/batch hashes and IDs, then builds a provider-neutral translation ZIP; skips symlinks/secrets, redacts local paths, protects existing packages |
 | `unity_fonts.py` | Unity only, optional (`pip install UnityPy fonttools`): lists Font assets inside `.assets` files and which characters of your translation each font lacks. Tested on one real file, not in CI |
 | `selftest.py` | End-to-end test including byte-for-byte round trips |
 
@@ -144,11 +145,11 @@ All in `skills/universal-game-localization/scripts/`, Python standard library on
   <img src="docs/images/batches.svg" alt="Size of one 100-string batch before and after slimming" width="75%">
 </p>
 
-Batches now carry only what the translator needs (`id`, `original`, useful context and length limits). The AI writes back just `id` + `translation`, and the merge step restores every other field by ID. Measured on real Hollow Knight text: about 69% less sent and 82% less written back.
+Batches now carry only what the translator needs (`id`, `original`, useful context and length limits). The selected translator writes back just `id` + `translation`, and the merge step restores every other field by ID. The translator can be the current agent or an external chat AI through Manual Handoff. Measured on real Hollow Knight text: about 69% less sent and 82% less written back.
 
 ## ⚠️ Limitations
 
-- Binary archives and proprietary formats are **not** extracted by the scripts.
+- Binary archives and proprietary formats are **not** extracted by the scripts. Manual Handoff packages only supported normalized translation batches; formats such as Godot `.po` still need a dedicated extractor/adapter before this workflow can process them.
 - Token counts from `split_batches.py` include configurable prompt overhead and response reserve, but remain heuristic estimates rather than exact model-tokenizer measurements.
 - Duplicate reuse is conservative: it requires exact original text plus matching context, speaker, notes, placeholders, tags, formatting and metadata. Unknown context is limited to the same source file; missing source-file information prevents cross-entry reuse.
 - Extraction refuses to overwrite existing `strings.json` / `files.json` unless `--force` is specified.
@@ -179,7 +180,7 @@ The most useful help right now: **try it on a real game** and add the result to 
 
 **Universal Game Localization Skill** هي skill خفيفة لـ [OpenCode](https://opencode.ai) تساعدك على **تجهيز أي لعبة للترجمة** (مع اهتمام خاص بالعربية واتجاه الكتابة من اليمين لليسار): فحص مجلد اللعبة، تحديد المحرك (engine)، استخراج النصوص، تقسيمها إلى دفعات (batches)، فحص الترجمة، وبناء باتش - مع استهلاك أقل قدر ممكن من التوكن.
 
-صُممت للمستخدمين على **الحدود المجانية** للذكاء الاصطناعي: ملف الـ skill صغير (~4KB)، والعمل الثقيل تقوم به سكريبتات بايثون **بدون أي توكن**، والترجمة نفسها تتم في أي AI مجاني تختاره، وليس داخل الـ agent.
+صُممت للمستخدمين على **الحدود المجانية** للذكاء الاصطناعي: ملف الـ skill صغير، والعمل الثقيل تقوم به سكريبتات بايثون **بدون أي توكن**. بعد تجهيز الدفعات تختار إما الموديل الحالي، أو Manual Handoff لترفع الدفعات يدويًا إلى أي chat AI متاح لك.
 
 > هذه أداة تجهيز وليست استخراجًا سحريًا. الصيغ النصية العادية تعمل مباشرة، أما الصيغ الثنائية (`.pak` و`.upk` و`.assets`...) فتحتاج أداة خارجية، والـ skill ستخبرك بذلك بدل التخمين.
 
@@ -189,10 +190,11 @@ The most useful help right now: **try it on a real game** and add the result to 
 2. **الاستخراج**: من `.ini .int .properties .lng .json .csv .tsv .txt` إلى ملف `strings.json` موحّد.
 3. **إزالة التكرار**: يجمع النصوص المتطابقة فقط عند تطابق السياق والمتحدث والتنسيق وحدود الطول، ويوفر ترجمة واحدة للمجموعة.
 4. **التقسيم**: دفعات أصغر بحساب تقديري لتكلفة التعليمات والمدخلات والرد.
-5. **الترجمة**: يطلب من AI إرجاع `id` والترجمة فقط، بدل إعادة كل بيانات المصدر.
-6. **الاستكمال**: يعيد الدفعات الناقصة أو التي تحتاج مراجعة.
-7. **توسيع وفحص**: يعيد الترجمة لكل IDs الأصلية، ثم يفحص المتغيرات والتنسيق والترميز والطول.
-8. **الحقن**: يكتب **نسخًا** مترجمة من الملفات (بنفس الترميز ونهايات الأسطر) مع ملف checksums. مجلد اللعبة لا يُمَس أبدًا.
+5. **اختيار المترجم**: تختار الموديل الحالي أو Manual Handoff لمترجم خارجي عبر ChatGPT أو Claude أو أي chat AI متاح لك.
+6. **التسليم اليدوي**: ينشئ ZIP متحققًا من سلامة الدفعات ويحتوي على النصوص والتعليمات فقط، بدون ملفات اللعبة أو API keys أو اشتراكات API. حدود الاستخدام والرفع تظل حسب الخدمة التي تختارها.
+7. **الاستكمال**: يعيد الدفعات الناقصة أو التي تحتاج مراجعة.
+8. **توسيع وفحص**: يعيد الترجمة لكل IDs الأصلية، ثم يفحص المتغيرات والتنسيق والترميز والطول.
+9. **الحقن**: يكتب **نسخًا** مترجمة من الملفات (بنفس الترميز ونهايات الأسطر) مع ملف checksums. مجلد اللعبة لا يُمَس أبدًا.
 
 ### التثبيت
 

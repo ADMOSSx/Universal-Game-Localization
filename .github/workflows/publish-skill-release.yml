@@ -94,4 +94,4 @@ jobs:
           gh release create "$TAG" "dist/universal-game-localization-$VERSION.zip" \
             --title "Universal Game Localization $TAG" \
             --target "$RELEASE_TARGET" \
-            --notes "This release adds a structured, read-only engine adapter layer for Unity, Unreal Engine 3/4/5 and Godot, with per-engine evidence, localization candidates, binary-format limits and next steps. It does not unpack proprietary archives or modify game files. See the bundled README and references/engine-adapters.md for usage and limitations."
+            --notes "This release adds an explicit current-agent vs Manual Handoff translator choice, plus a validated provider-neutral ZIP workflow for ChatGPT, Claude or another chat AI. It requires no API key or paid API; the selected service's own limits still apply. Handoff preflight verifies batch/source hashes and IDs, redacts local paths, and excludes unlisted batch files. Godot .po files remain detectable candidates but are not yet supported by the core gettext extractor."

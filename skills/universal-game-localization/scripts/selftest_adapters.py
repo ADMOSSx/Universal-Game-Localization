@@ -62,6 +62,7 @@ def main()->None:
         detected=by_id(A.analyze(godot),"godot")
         assert detected["project_name"]=="Adapter Test" and detected["engine_version_clues"]=="4.3",detected
         assert "locale/en.po" in detected["localization_candidates"]
+        assert ".po" not in detected["text_formats_extractable_by_core"]
 
         godot_pack=base/"godot-pack"
         write(godot_pack,"game.pck",b"GDPC"+b"\x00"*16)

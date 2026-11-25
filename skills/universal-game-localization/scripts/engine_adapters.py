@@ -152,7 +152,7 @@ def _godot(root:Path,paths:list[str])->dict|None:
       "confidence":"high" if project_files or pcks else "medium","score":min(100,40+25*len(evidence)),
       "project_name":project_name,"engine_version_clues":version,"evidence":sorted(set(evidence)),
       "project_files":project_files[:10],"localization_candidates":localization[:40],"opaque_asset_candidates":pcks[:30],
-      "text_formats_extractable_by_core":[".ini",".json",".csv",".tsv",".txt",".po"],
+      "text_formats_extractable_by_core":[".ini",".json",".csv",".tsv",".txt"],
       "next_steps":[
         "For an editable project, inspect project.godot and translation resources; preserve resource UIDs and references.",
         "Prefer source .po/.pot/.csv/.json/.tres/.tscn files when available; translate identified user-facing fields only.",

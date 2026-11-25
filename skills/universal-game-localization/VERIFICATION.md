@@ -1,38 +1,35 @@
-# Release verification — 1.1.0
+# Release verification — 1.3.0
 
 Date: 2026-11-25
 
-## Focused reverse-mode regression suite
+## Verification scope
 
-Command:
+The v1.3.0 CI release workflow checks the package manifest, compiles all Python helpers, runs the full helper regression suite, and runs the Unity/Unreal/Godot adapter self-test on:
 
-```bash
-python scripts/selftest_legacy.py
-```
+- Ubuntu 24.04 + Python 3.10
+- Ubuntu 24.04 + Python 3.12
+- Windows + Python 3.10
+- Windows + Python 3.12
 
-Result in the full review bundle: `LEGACY RTL + VCDIFF SELFTEST PASSED`.
+The release workflow publishes only after all matrix jobs succeed. See the GitHub Actions run linked from the v1.3.0 release for the actual result.
 
-Covered cases:
+## Manual Handoff regression coverage
 
-- Arabic logical → legacy visual/presentation-form → logical round-trip.
-- Observed PUA offset mapping (`0xDE6`, including `F09A` → `FE80`).
-- Canonical localization JSON lint (`original` / `translation`), bad and good examples.
-- Existing output refusal, `--force`, input-overwrite refusal and symlink-output refusal.
-- VCDIFF source-window offset, standard checksum-after layout, overlapping target copies, and chained `VCD_TARGET` unknown-byte propagation.
-- Corrupt Adler-32 rejection and refusal to claim an expected MD5 when source bytes are unavailable.
-- Actual Outlast fixtures when present alongside the review bundle.
-
-## Outlast fixture results
-
-- `arabic_lint.py evidence/_arabic_corpus.json --max 0`: 5,259 records, 0 errors, 28 warnings (16 repeated-word warnings and 12 tatweel warnings).
-- `r_007.delta` + `OLGame.int`: Adler-32 MATCH; reconstructed MD5 `09c420931bbe509803a688204bb2080a` MATCH.
-- `r_010.delta` without pristine source: 37.0% known bytes (19,173 / 51,838); 32,665 bytes remain source-dependent/unknown. Adler-32 is NOT VERIFIED without complete source bytes. This is byte coverage, not a claim that 37% of text strings are readable.
+The full synthetic self-test covers:
+- Refusal to create an empty handoff package when batches or the normalized source are missing.
+- SHA-256, ID-set, entry-count and batch-manifest preflight checks.
+- Rejection of tampered batches before any output package is written.
+- Exclusion of files not listed in the verified batch manifest.
+- Inclusion of the translator guide and only the declared translation batches; exclusion of normalized full-source files, reports, local scripts and game files.
+- Redaction of the normalized source's absolute local path from the copied batch manifest.
+- Rendering of source/target language and game metadata in handoff instructions.
+- ZIP integrity and manifest hash verification.
+- Safe replacement rules for previously generated handoff packages.
 
 ## Scope and limitations
 
-- Python compilation and CLI help checks were run for the release scripts.
-- The new focused reverse-mode suite passed.
-- The historical full `scripts/selftest.py` did not complete within the five-minute execution window in this environment. It is **not marked as passed**; run it in the target environment before treating the entire legacy helper suite as verified.
-- The VCDIFF decoder deliberately supports only version-0, default-code-table, uncompressed windows with no unsupported header/delta indicators. It fails closed for compressed sections, custom code tables and unsupported flags.
-- No patch installer or game executable was launched. No user game folder was modified.
-- The installable release excludes Outlast game files, delta payloads and recovered game text.
+- Manual Handoff is a manual file-transfer workflow, not an API integration. It requires no API key or paid API, but the chosen chat service's own free-tier, context and file-upload limits still apply.
+- The original game folder and binary archives are not part of the handoff package.
+- The handoff workflow accepts normalized JSON batches. Godot .po files can be detected as localization candidates but are not yet parsed by the core extractor; gettext support remains a separate adapter task.
+- A successful structural validator does not prove semantic translation quality or in-game rendering.
+- No game executable or patch installer is run by the test suite; the suite uses synthetic files.

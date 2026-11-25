@@ -1,6 +1,6 @@
 # ADMOSS Universal Game Localization
 
-**Version:** 1.2.0  
+**Version:** 1.3.0  
 **Skill ID:** `universal-game-localization`
 
 A low-token workflow for inspecting game files, identifying engine-specific localization paths, extracting and batching text, validating returned translations, and building a patch. It includes structured read-only adapters for **Unity, Unreal Engine 3/4/5 and Godot**, plus a static **reverse mode** for studying existing fan translations and supported VCDIFF patch packs without executing installers.
@@ -32,6 +32,29 @@ The report separates Unity Mono/IL2CPP clues, Unreal 3 versus Unreal 4/5 and IoS
 Read `SKILL.md`. It keeps the agent instructions intentionally short; reference material is loaded
 only when the task requires it. For Arabic legacy/RTL work or an existing patch, also read
 `references/legacy-rtl-and-delivery.md`.
+
+## Translator choice and Manual Handoff
+
+After extraction, deduplication and batching, the skill asks who should translate:
+
+- **Current agent/model**: translate one batch at a time in the current coding-agent session. This consumes that model's usage quota.
+- **Manual Handoff (recommended for limited/free quotas)**: create a validated ZIP, then upload selected batch JSON files manually to ChatGPT, Claude, or another chat AI you can access. Return the JSON files to the local workspace for merge and validation.
+
+Manual Handoff needs **no API key, paid API, OAuth connection or automatic provider integration**. The chosen chat service's own free-tier, context and file-upload limits still apply. The package contains only declared translation batches and instructions. It excludes reports, normalized full-source files, local helper scripts, original game files and binary archives.
+
+Run from the installed skill folder:
+
+    python scripts/make_handoff.py "<workspace>"
+
+The script verifies that the batch manifest, every batch SHA-256, entry counts, unique IDs and normalized-source hash all match before packaging. It also redacts local paths, skips likely secrets and symlinks, and only copies files listed by the verified batch manifest from the batch folder.
+
+Default output:
+
+    <workspace>/HANDOFF_PACKAGE.zip
+
+Upload README_FIRST.md, MASTER_INSTRUCTIONS.md, translator/GUIDE.md, and one or a few translation_batches/batch_NNNN.json files. Save returned files under separate folders such as returned_1/ and returned_2/; never overwrite the original batches. See references/manual-handoff.md for import, resume, merge and validation commands.
+
+**Format note:** the handoff workflow currently expects normalized JSON batches. Although Godot .po files are detectable localization candidates, the core extractor does not yet parse gettext PO files. A PO/gettext adapter or verified conversion is needed before creating batches from them.
 
 ## Reverse-mode tools
 

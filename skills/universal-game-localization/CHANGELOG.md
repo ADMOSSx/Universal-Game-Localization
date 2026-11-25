@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.0 — 2026-11-25
+- Added explicit current-agent versus Manual Handoff translator selection, with Manual Handoff recommended for users saving limited/free current-agent quotas.
+- Reworked make_handoff.py to validate the normalized source, batch manifest, SHA-256 hashes, entry counts and stable IDs before creating a package.
+- Added provider-neutral external-AI rules, a manual handoff guide, and clearer upload/return/resume instructions.
+- Handoff ZIPs now redact the batch manifest's absolute local path, skip unlisted batch-folder files, include the translator guide while excluding reports, the normalized full-source corpus and local helper scripts, and render source/target metadata.
+- Added regression coverage for empty/tampered batches, ZIP contents, path privacy and language placeholders.
+- Corrected the Godot adapter: .po remains a localization candidate but is not listed as extractable by the core extractor until a gettext adapter exists.
+
+
 ## 1.2.0 — 2026-11-25
 
 - Added read-only Unity, Unreal Engine 3/4/5 and Godot adapter discovery with runtime clues, localization candidates, confidence and engine-specific next steps.

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.0 — 2026-11-25
+- Added a translator-choice step: current agent/model or provider-neutral Manual Handoff.
+- Hardened handoff preflight against missing, modified, incomplete or mismatched translation batches and source hashes.
+- Improved handoff privacy by redacting the batch manifest's local source path and excluding files not listed in the verified batch manifest.
+- Added provider-neutral instructions, upload/return/resume guidance, rendered language metadata and an automatic translator guide fallback. The ZIP excludes normalized full-source files, reports and local scripts.
+- Clarified that Godot .po files are detectable but are not yet supported by the core text extractor.
+- Added end-to-end regression tests for handoff validation, ZIP contents, path redaction and placeholder rendering.
+
+
 ## 1.2.0 — 2026-11-25
 
 - Structured read-only adapters for Unity, Unreal Engine 3/4/5 and Godot.
