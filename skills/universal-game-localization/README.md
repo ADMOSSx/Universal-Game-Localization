@@ -1,6 +1,6 @@
 # ADMOSS Universal Game Localization
 
-**Version:** 1.3.0  
+**Version:** 1.4.0  
 **Skill ID:** `universal-game-localization`
 
 A low-token workflow for inspecting game files, identifying engine-specific localization paths, extracting and batching text, validating returned translations, and building a patch. It includes structured read-only adapters for **Unity, Unreal Engine 3/4/5 and Godot**, plus a static **reverse mode** for studying existing fan translations and supported VCDIFF patch packs without executing installers.
@@ -72,6 +72,13 @@ Upload README_FIRST.md, MASTER_INSTRUCTIONS.md, translator/GUIDE.md, and one or 
 `arabic_lint.py` is read-only. The output-producing commands in `arabic_legacy.py` and
 `vcdiff_decode.py` require explicit output paths, refuse to overwrite their inputs or write through
 symlinked destinations, and require `--force` to replace an existing generated output.
+
+## v1.4.0 updates
+
+- Compact translation batches are the default; use `--full` or `--pretty` for expanded output.
+- `status.py` summarizes progress and orders auto-detected numbered return folders naturally.
+- Deduplication no longer treats per-entry identity metadata as a translation constraint; older dedupe maps must be regenerated after updating.
+- Arabic lint, source-aware validation, extraction path hints and package integrity checks received regression fixes.
 
 ## Tests
 
