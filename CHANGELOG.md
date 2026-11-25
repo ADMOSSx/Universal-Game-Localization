@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0 — 2026-11-25
+
+- Structured read-only adapters for Unity, Unreal Engine 3/4/5 and Godot.
+- Engine-specific localization candidates, runtime clues, safe next steps and regression tests.
+- Checksum-manifest verification and automated installable release packaging.
+
 ## Unreleased
 - Batches are slim and compact by default (`--full` / `--pretty` to opt out): on 100 real Hollow Knight strings the batch went from 50.4 to 15.4 KB and the compact return is 82% smaller than echoing every field.
 - New `status.py`: progress and the next command in a few lines (resume after a limit runs out).

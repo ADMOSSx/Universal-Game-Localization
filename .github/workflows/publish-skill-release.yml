@@ -1,0 +1,96 @@
+name: Publish skill release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'skills/universal-game-localization/**'
+      - '.github/workflows/publish-skill-release.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      commit_sha: ${{ steps.commit.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Regenerate package manifest
+        working-directory: skills/universal-game-localization
+        run: python scripts/verify_manifest.py --write
+      - name: Commit manifest when it changed
+        id: commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add skills/universal-game-localization/MANIFEST.sha256
+          if ! git diff --cached --quiet; then
+            git commit -m 'Update skill package manifest'
+            git push origin HEAD:main
+          fi
+          git fetch origin main
+          echo "sha=$(git rev-parse origin/main)" >> "$GITHUB_OUTPUT"
+
+  verify:
+    needs: prepare
+    name: Verify (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+        python: ['3.10', '3.12']
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.commit_sha }}
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Verify packaged file hashes
+        working-directory: skills/universal-game-localization
+        run: python scripts/verify_manifest.py
+      - name: Compile Python helpers
+        working-directory: skills/universal-game-localization
+        run: python -m compileall -q scripts
+      - name: Run full helper self-test
+        working-directory: skills/universal-game-localization
+        run: python scripts/selftest.py
+      - name: Run engine adapter self-test
+        working-directory: skills/universal-game-localization
+        run: python scripts/selftest_adapters.py
+
+  publish:
+    needs: [prepare, verify]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.commit_sha }}
+      - name: Build installable ZIP and publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '\r\n' < skills/universal-game-localization/VERSION)"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid VERSION: $VERSION" >&2
+            exit 1
+          fi
+          TAG="v$VERSION"
+          RELEASE_TARGET="${{ needs.prepare.outputs.commit_sha }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; bump VERSION before publishing." >&2
+            exit 1
+          fi
+          mkdir -p dist
+          (cd skills && zip -qr "$GITHUB_WORKSPACE/dist/universal-game-localization-$VERSION.zip" universal-game-localization)
+          gh release create "$TAG" "dist/universal-game-localization-$VERSION.zip" \
+            --title "Universal Game Localization $TAG" \
+            --target "$RELEASE_TARGET" \
+            --notes "This release adds a structured, read-only engine adapter layer for Unity, Unreal Engine 3/4/5 and Godot, with per-engine evidence, localization candidates, binary-format limits and next steps. It does not unpack proprietary archives or modify game files. See the bundled README and references/engine-adapters.md for usage and limitations."

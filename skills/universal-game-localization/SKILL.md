@@ -1,6 +1,6 @@
 ---
 name: universal-game-localization
-description: Prepare a game for localization (e.g. Arabic) - inspect folder, detect engine, extract text, make translation batches, validate, build patch. Also analyze an existing fan translation or delta patch installer without running it (reverse mode). Use when the user wants to translate/localize a game, extract its text, or audit/understand an existing patch.
+description: Prepare games for localization with low-token workflows, structured Unity/Unreal/Godot engine adapters, text extraction, translation batches, validation and patch building. Also inspect existing fan translations and supported delta patch installers without running them. Use when translating a game, extracting text or auditing an existing patch.
 ---
 
 # ADMOSS Universal Game Localization (lean)
@@ -25,8 +25,8 @@ Goal: prepare a game for translation with **minimum tokens** (users are on free 
 
 ## Workflow
 1. **Scope**: game folder, target language, "prepare only" vs "translate too". Ask only what's missing. If `reports/PROJECT.md` exists, resume from it; run `status.py <ws>` to see progress.
-2. **Inventory**: `python <S>/scripts/inventory.py "<game>" --out <ws>/reports`, read only `INVENTORY_SUMMARY.json`. Engine hints are leads; note engine + confidence in PROJECT.md.
-3. **Extract** (plain text: .ini .int .properties .lng .json .csv .tsv .txt): `extract_text.py "<game>" --out <ws>/normalized/strings.json [--include "glob"]`. Binary/proprietary formats: look for a maintained tool (`references/engine-and-format-guide.md`), ask before installing, else record BLOCKED + manual steps. If a fan patch already exists, run reverse mode first (below): its encoding/layout findings determine how to inject text.
+2. **Inventory + engine adapter**: `python <S>/scripts/inventory.py "<game>" --out <ws>/reports`, then `python <S>/scripts/engine_adapters.py "<game>" --out <ws>/reports/ENGINE_ADAPTERS.json`. Read only the summaries. Follow the best-supported adapter in `ENGINE_ADAPTERS.json`; it provides runtime clues, localization candidates and safe next steps. Evidence is not proof, and multiple engines may be reported. Record engine + confidence in PROJECT.md.
+3. **Extract** (plain text: .ini .int .properties .lng .json .csv .tsv .txt): use the adapter report to prioritize likely language folders. The adapters do not unpack proprietary archives; `extract_text.py "<game>" --out <ws>/normalized/strings.json [--include "glob"]`. Binary/proprietary formats: look for a maintained tool (`references/engine-and-format-guide.md`), ask before installing, else record BLOCKED + manual steps. If a fan patch already exists, run reverse mode first (below): its encoding/layout findings determine how to inject text.
 4. **Deduplicate** (optional, local): `deduplicate_strings.py <ws>/normalized/strings.json --out <ws>/normalized/strings_unique.json --map <ws>/normalized/DEDUPE_MAP.json`. Only exact repeats with identical context/speaker/tags/length limits are merged; unknown context stays within its file.
 5. **Batches**: `split_batches.py <ws>/normalized/strings_unique.json --out <ws>/translation_batches --size 100 --group-by source_file`. Batches carry only what the translator needs. Add `--token-budget N` only if the target AI's context requires it (small budgets create many more batches). Never re-split after translation starts.
 6. **Handoff**: fill `translator/GUIDE.md` from `templates/GUIDE_TEMPLATE.md` (short; mark unknowns), then `make_handoff.py <ws>`; give the user the printed upload order.
@@ -46,6 +46,7 @@ Translate-too requests: follow `translator/GUIDE.md`, one batch at a time, compa
 | File | Read when |
 |---|---|
 | references/engine-and-format-guide.md | engine unclear, or a binary format needs a tool |
+| references/engine-adapters.md | Unity, Unreal or Godot adapter report needs interpretation |
 | references/legacy-rtl-and-delivery.md | existing fan patch, legacy Arabic/RTL text, PUA mapping, or delta installer |
 | references/arabic-localization-guide.md | target is Arabic/RTL and rendering is untested |
 | references/arabic-test-cases.md | building an in-game Arabic test |

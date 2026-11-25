@@ -87,7 +87,7 @@ python scripts\selftest.py        # last line: SELFTEST PASSED
   <img src="docs/images/pipeline.svg" alt="Pipeline: inventory, extract, batch, translate, validate, patch" width="100%">
 </p>
 
-1. **Inventory** scans the folder read-only and gives engine hints plus where the text probably lives.
+1. **Inventory + engine adapters** scan read-only. The structured adapter report distinguishes Unity Mono/IL2CPP, Unreal 3 vs 4/5 (including IoStore clues), and Godot project/PCK layouts, then lists likely localization paths and safe next steps.
 2. **Extract** pulls strings from `.ini .int .properties .lng .json .csv .tsv .txt` into one normalized `strings.json`.
 3. **Deduplicate** collapses exact repeated strings only when context, speaker, tags, formatting and length constraints match. Unknown context is scoped to its source file.
 4. **Batch** splits unique entries into small, ID-stable JSON files. The token budget includes prompt overhead and a reserved response estimate.
@@ -111,6 +111,7 @@ All in `skills/universal-game-localization/scripts/`, Python standard library on
 | Script | What it does |
 |---|---|
 | `inventory.py` | Read-only audit: extensions, magic bytes, engine hints, localization candidates, fonts, archives |
+| `engine_adapters.py` | Structured Unity / Unreal / Godot detection, candidate paths and safe next steps |
 | `extract_text.py` | Plain-text formats → `normalized/strings.json` + `files.json` with source SHA-256 hashes; refuses output inside the game |
 | `deduplicate_strings.py` | Collapses exact duplicates with matching context/speaker/format constraints; writes a source-hash-bound ID map |
 | `deduplicate_strings.py` / `expand_translations.py` | Optional: translate exact repeats once (same context and limits), then restore every ID with a hash-checked map |

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0 — 2026-11-25
+
+- Added read-only Unity, Unreal Engine 3/4/5 and Godot adapter discovery with runtime clues, localization candidates, confidence and engine-specific next steps.
+- Added `engine_adapters.py`; Unity Mono/IL2CPP are distinguished, Unreal IoStore markers are recognized, and Godot PCK detection checks the `GDPC` magic header.
+- Added `engine-adapters.md`, synthetic adapter regression tests and a package-manifest verifier.
+- Kept proprietary archives opaque: adapters never unpack assets, execute installers or modify game files.
+- Added a release workflow that verifies the checksum manifest and test matrix before producing the installable ZIP.
+
 ## 1.1.0 — 2026-11-25
 
 - Added reverse mode for static analysis of existing fan translations and delta patch installers.

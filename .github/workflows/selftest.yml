@@ -19,3 +19,5 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Run helper self-test
         run: python skills/universal-game-localization/scripts/selftest.py
+      - name: Run engine adapter self-test
+        run: python skills/universal-game-localization/scripts/selftest_adapters.py

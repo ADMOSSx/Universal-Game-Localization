@@ -1,11 +1,9 @@
 # ADMOSS Universal Game Localization
 
-**Version:** 1.1.0  
+**Version:** 1.2.0  
 **Skill ID:** `universal-game-localization`
 
-A low-token workflow for inspecting game files, extracting and batching text, validating returned
-translations, and building a patch. This release also adds a static **reverse mode** for studying
-existing fan translations and supported VCDIFF patch packs without executing their installers.
+A low-token workflow for inspecting game files, identifying engine-specific localization paths, extracting and batching text, validating returned translations, and building a patch. It includes structured read-only adapters for **Unity, Unreal Engine 3/4/5 and Godot**, plus a static **reverse mode** for studying existing fan translations and supported VCDIFF patch packs without executing installers.
 
 ## Install / update
 
@@ -19,6 +17,16 @@ existing fan translations and supported VCDIFF patch packs without executing the
 The exact installation directory depends on the agent/client that loads skills. Keep the folder
 name `universal-game-localization` and place it in that client's configured skills directory.
 
+## Engine adapters (new in 1.2.0)
+
+Run this after inventory to produce a structured JSON report:
+
+```bash
+python scripts/engine_adapters.py "<game-or-project-folder>" --out "<workspace>/reports/ENGINE_ADAPTERS.json"
+```
+
+The report separates Unity Mono/IL2CPP clues, Unreal 3 versus Unreal 4/5 and IoStore markers, and Godot project/PCK evidence. It lists likely localization files, opaque binary containers, confidence and safe next steps. It is a classifier, not an archive extractor; proprietary assets remain untouched. Read `references/engine-adapters.md` for details and limitations.
+
 ## Main workflow
 
 Read `SKILL.md`. It keeps the agent instructions intentionally short; reference material is loaded
@@ -31,6 +39,9 @@ only when the task requires it. For Arabic legacy/RTL work or an existing patch,
   visual-order strings to logical Unicode and shape logical text for a legacy renderer.
 - `scripts/arabic_lint.py`: audit the skill's JSON schema (`original`/`translation`), source/target
   JSON, TSV, `.int`/`.ini` and recovered text corpora.
+- `scripts/engine_adapters.py`: read-only Unity/Unreal/Godot classification with localization candidates and per-engine next steps.
+- `scripts/verify_manifest.py`: verify the package checksums (or regenerate them with `--write`).
+- `scripts/selftest_adapters.py`: synthetic Unity/Unreal/Godot adapter regression tests.
 - `scripts/vcdiff_decode.py`: inspect/decode uncompressed VCDIFF using the default code table;
   checks source positions, window sizes and Adler-32. Unsupported compressed/custom-table variants
   fail closed instead of producing a guessed result.
@@ -42,7 +53,9 @@ symlinked destinations, and require `--force` to replace an existing generated o
 ## Tests
 
 ```bash
-python scripts/selftest_legacy.py  # quick tests for the new reverse-mode tools
+python scripts/verify_manifest.py # package integrity
+python scripts/selftest_adapters.py # engine adapter regression tests
+python scripts/selftest_legacy.py  # quick tests for reverse-mode tools
 python scripts/selftest.py         # full regression suite for all helpers
 ```
 
