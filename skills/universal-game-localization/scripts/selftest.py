@@ -4,6 +4,7 @@ Run:  python scripts/selftest.py
 """
 from pathlib import Path
 import os
+import hashlib
 import json, re, subprocess, sys, tempfile, zipfile
 
 HERE = Path(__file__).resolve().parent
@@ -369,6 +370,18 @@ def main():
         out = run(HERE / "status.py", t, "--batches", mr / "b", "--returned", r1, r2)
         assert "Everything translated" in out, out
 
+        # Auto-detected rounds must use numeric order: returned_10 supersedes returned_2.
+        auto2, auto10 = t / "returned_2", t / "returned_10"
+        auto2.mkdir(); auto10.mkdir()
+        first_auto_entry = json.loads((mr / "b" / "batch_0001.json").read_text(encoding="utf-8"))["entries"][0]
+        reply = {"entries": [{"id": first_auto_entry["id"], "translation": "قديم", "status": "needs_review"}]}
+        (auto2 / "batch_0001.json").write_text(json.dumps(reply, ensure_ascii=False), encoding="utf-8")
+        reply["entries"][0]["translation"] = "نهائي"
+        reply["entries"][0].pop("status")
+        (auto10 / "batch_0001.json").write_text(json.dumps(reply, ensure_ascii=False), encoding="utf-8")
+        out = run(HERE / "status.py", t, "--batches", mr / "b")
+        assert "Done: 1" in out and "needs_review: 0" in out, out
+
         # --- regression: lint/validator/extractor fixes ---
         lint_nl = t / "lint_nl.json"
         lint_nl.write_text(json.dumps({"entries": [{"id": "n1", "original": "Line one\\nLine two",
@@ -403,6 +416,31 @@ def main():
 
         # --- fast regression suite for the reverse-mode helpers ---
         run(HERE / "selftest_legacy.py")
+
+        # Manifest verification must reject symlink directories instead of skipping them as folders.
+        bundle = t / "manifest_bundle"
+        (bundle / "scripts").mkdir(parents=True)
+        verifier_copy = bundle / "scripts" / "verify_manifest.py"
+        verifier_copy.write_text((HERE / "verify_manifest.py").read_text(encoding="utf-8"), encoding="utf-8")
+        payload = bundle / "payload.txt"
+        payload.write_text("manifest fixture", encoding="utf-8")
+        tracked = (verifier_copy, payload)
+        manifest_lines = [
+            f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.relative_to(bundle).as_posix()}"
+            for path in tracked
+        ]
+        (bundle / "MANIFEST.sha256").write_text("\n".join(manifest_lines) + "\n", encoding="utf-8")
+        outside = t / "outside"
+        outside.mkdir()
+        (outside / "hidden.txt").write_text("outside", encoding="utf-8")
+        link = bundle / "linked_directory"
+        try:
+            link.symlink_to(outside, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            pass  # Symlink creation may be disabled on some Windows environments.
+        else:
+            run(verifier_copy, expect=1)
+            run(verifier_copy, "--write", expect=1)
 
     print("SELFTEST PASSED")
 
