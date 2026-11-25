@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.4.0 — 2026-11-25
 - Fix: `arabic_lint.py` reported a literal `\n` before Arabic as `mixed-latin` (bad lookbehind).
 - Fix: `arabic_lint.py` now uses the validator's token regex (`%1$s`, `%.2f`, `[NAME]`, `${x}`, BBCode).
 - Fix: `validate_translations.py --source` takes `original` from the source for compact replies.
@@ -8,6 +8,13 @@
 - Fix: `extract_text.py` no longer treats `Textures/` or `Context/` as localization paths.
 - Fix: `make_handoff.py` no longer aborts when game dialogue looks like a credential.
 - CI: publishing skips (instead of failing) when the release exists; notes come from CHANGELOG.
+
+- Feature: batches are compact by default (`--full` / `--pretty` opt out); a measured 100-string Hollow Knight sample fell from 50.4 KB to 15.4 KB.
+- Feature: added `status.py` progress summary and natural numeric ordering for auto-detected return rounds.
+- Fix: deduplication ignores per-entry identity metadata while retaining layout constraints; older dedupe maps must be regenerated.
+- Fix: package-manifest verification now rejects symlinked directories.
+- Docs: README adds Quick Start, project-status table, FAQ, Mermaid flow and navigation.
+- Test scope: one partial Hollow Knight report exists; its extraction used separate UnityPy scripts, not the core extractor.
 
 ## 1.3.0 — 2026-11-25
 - Added explicit current-agent versus Manual Handoff translator selection, with Manual Handoff recommended for users saving limited/free current-agent quotas.

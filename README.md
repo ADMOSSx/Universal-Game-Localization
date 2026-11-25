@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ADMOSSx/Universal-Game-Localization/releases/tag/v1.3.0"><img src="https://img.shields.io/badge/release-v1.3.0-brightgreen.svg?style=for-the-badge" alt="Latest release v1.3.0"></a>
+  <a href="https://github.com/ADMOSSx/Universal-Game-Localization/releases/tag/v1.4.0"><img src="https://img.shields.io/badge/release-v1.4.0-brightgreen.svg?style=for-the-badge" alt="Latest release v1.4.0"></a>
   <a href="https://github.com/ADMOSSx/Universal-Game-Localization/actions/workflows/selftest.yml"><img src="https://github.com/ADMOSSx/Universal-Game-Localization/actions/workflows/selftest.yml/badge.svg?style=for-the-badge" alt="selftest"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge" alt="MIT"></a>
   <img src="https://img.shields.io/badge/python-3.10%2B-3776AB.svg?style=for-the-badge" alt="Python 3.10+">
@@ -98,7 +98,7 @@ Paste this into OpenCode (or another coding agent):
 <details>
 <summary><b>📦 Manual install / update</b></summary>
 
-Download the latest [v1.3.0 release ZIP](https://github.com/ADMOSSx/Universal-Game-Localization/releases/download/v1.3.0/universal-game-localization-1.3.0.zip). Extract the <code>universal-game-localization</code> folder and replace the previous installed folder with the complete new folder. Do not copy only <code>SKILL.md</code>: scripts, references and templates are required. The usual OpenCode global location on Windows is <code>%USERPROFILE%\.config\opencode\skills\universal-game-localization\</code>. Restart OpenCode after replacing it. Per-project installs (<code>.opencode/skills/</code>) also work; see the [OpenCode skills docs](https://opencode.ai/docs/skills).
+Download the latest [v1.3.0 release ZIP](https://github.com/ADMOSSx/Universal-Game-Localization/releases/download/v1.4.0/universal-game-localization-1.4.0.zip). Extract the <code>universal-game-localization</code> folder and replace the previous installed folder with the complete new folder. Do not copy only <code>SKILL.md</code>: scripts, references and templates are required. The usual OpenCode global location on Windows is <code>%USERPROFILE%\.config\opencode\skills\universal-game-localization\</code>. Restart OpenCode after replacing it. Per-project installs (<code>.opencode/skills/</code>) also work; see the [OpenCode skills docs](https://opencode.ai/docs/skills).
 
 </details>
 
@@ -156,8 +156,9 @@ python scripts/extract_text.py "<game>" --out "<ws>/normalized/strings.json" --t
 # 4. Split into small, ID-stable batches
 python scripts/split_batches.py "<ws>/normalized/strings.json" --out "<ws>/translation_batches" --size 100
 
-# 5. Translate: use your agent, or build the Manual Handoff ZIP for any chat AI.
-#    Save each round of replies in its own folder: <ws>/returned_1, returned_2, ...
+# 5. Manual Handoff only: build a ZIP for an external chat AI.
+#    Skip this command when the current agent is doing the translation.
+#    Save each return round in its own folder: <ws>/returned_1, returned_2, ...
 python scripts/make_handoff.py "<ws>"
 
 # 6-7. Merge the replies, then validate placeholders, markup, encoding and Arabic/RTL issues
@@ -178,6 +179,24 @@ Good to know:
 </details>
 
 ---
+
+<details>
+<summary><strong>🆕 What's new in v1.4.0</strong></summary>
+
+Version **1.4.0** focuses on lower translation overhead, clearer progress and stronger package verification:
+
+- **Smaller translation batches:** compact, one-entry-per-line JSON is now the default; use <code>--full</code> or <code>--pretty</code> when you need the expanded format. A measured 100-string Hollow Knight sample dropped from 50.4 KB to 15.4 KB.
+- **Progress at a glance:** the new <code>status.py</code> reports completed, review-needed and missing entries, plus the next useful resume command.
+- **Safer deduplication:** per-entry identity metadata no longer blocks otherwise safe reuse; layout limits still remain part of the match, and old dedupe maps must be regenerated.
+- **More reliable QA and extraction:** Arabic lint shares the validator's placeholder rules, compact replies can be validated against their original source, and generic folder names such as <code>Textures</code> no longer trigger false localization detection.
+- **Stronger release checks:** package verification rejects symlinked directories, and automatic return-round discovery sorts numbered folders in the correct order.
+- **Expanded regression coverage:** the release workflow checks the manifest, compiles helpers and runs the full synthetic suite plus engine-adapter tests on Windows and Ubuntu with Python 3.10 and 3.12.
+
+**Real-game status:** the repository still records one community game report — Hollow Knight, with Arabic working partially. That run used separate UnityPy scripts, not this repository's core extractor. CI tests are synthetic and do not replace testing a game in-game.
+
+See the [v1.3.0 release](https://github.com/ADMOSSx/Universal-Game-Localization/releases/tag/v1.3.0) for the Manual Handoff workflow introduced there, and the full [CHANGELOG](CHANGELOG.md).
+
+</details>
 
 <details>
 <summary><strong>🆕 What's new in v1.3.0</strong></summary>
@@ -565,6 +584,17 @@ If this saved you tokens, a ⭐ on the repo helps other localizers find it.
 
 صُممت خصوصًا للمستخدمين اللي بيشتغلوا بحدود مجانية للذكاء الاصطناعي. سكريبتات Python بتنفذ الشغل المتكرر محليًا **من غير استهلاك AI tokens**، وبعد تجهيز الدفعات تقدر تختار الموديل الحالي أو تستخدم **Manual Handoff** مع أي chat AI متاح لك.
 
+### 🆕 الجديد في الإصدار 1.4.0
+
+- **دفعات أصغر:** ملفات الترجمة بقت مختصرة افتراضيًا لتقليل حجم البيانات اللي بتتبعت للمترجم. تقدر ترجع للصيغة الكاملة باستخدام <code>--full</code> أو <code>--pretty</code>.
+- **متابعة التقدم:** سكريبت <code>status.py</code> بيعرض النصوص اللي خلصت، واللي محتاجة مراجعة، والناقصة، وكمان الأمر التالي للاستكمال.
+- **إزالة تكرار أدق:** السكريبت بيفصل بين بيانات هوية كل نص وقيود العرض، وبيسمح بإعادة استخدام الترجمة لما السياق والقيود متطابقين. لازم تعيد إنشاء خرائط dedup القديمة بعد التحديث.
+- **فحص واستخراج أفضل:** تم إصلاح فحص placeholders في العربية، والتحقق من ردود JSON المختصرة باستخدام المصدر، وتقليل اكتشاف ملفات عشوائية داخل مجلدات زي <code>Textures</code>.
+- **حماية أقوى:** فحص الحزمة بيرفض مجلدات symlink، وترتيب جولات الترجمة التلقائي بقى رقميًا بشكل صحيح.
+- **اختبارات أوسع:** CI بيختبر Windows وUbuntu مع Python 3.10 و3.12. الاختبارات دي صناعية؛ مش بديل عن تجربة اللعبة فعليًا.
+
+**حالة اختبار الألعاب:** لسه فيه تقرير لعبة حقيقية واحد فقط، وهو Hollow Knight، والعربية شغالة جزئيًا. تجربة Hollow Knight اتعملت بأدوات UnityPy منفصلة، مش بالـ extractor الأساسي الموجود في المشروع.
+
 ### ✨ الجديد في الإصدار 1.3.0
 
 - **اختيار المترجم:** تختار الموديل الحالي أو Manual Handoff لترجمة الدفعات عن طريق ChatGPT أو Claude أو أي chat AI تختاره.
@@ -588,7 +618,7 @@ npx skills add ADMOSSx/Universal-Game-Localization --skill universal-game-locali
 
 بعد التثبيت افتح Session جديدة في OpenCode.
 
-**التحديث اليدوي:** نزّل [ملف الإصدار v1.3.0](https://github.com/ADMOSSx/Universal-Game-Localization/releases/download/v1.3.0/universal-game-localization-1.3.0.zip)، وفك الضغط، واستبدل مجلد الـ skill القديم بالمجلد الجديد بالكامل. ما تنسخش <code>SKILL.md</code> لوحده؛ لازم السكريبتات والمراجع والقوالب كمان.
+**التحديث اليدوي:** نزّل [ملف الإصدار v1.4.0](https://github.com/ADMOSSx/Universal-Game-Localization/releases/download/v1.4.0/universal-game-localization-1.4.0.zip)، وفك الضغط، واستبدل مجلد الـ skill القديم بالمجلد الجديد بالكامل. ما تنسخش <code>SKILL.md</code> لوحده؛ لازم السكريبتات والمراجع والقوالب كمان.
 
 ### 🏁 بداية سريعة
 
@@ -598,10 +628,13 @@ npx skills add ADMOSSx/Universal-Game-Localization --skill universal-game-locali
 
 > Use the universal-game-localization skill. Analyze this game folder: D:\Games\MyGame. Prepare it for Arabic localization. Do not modify the original game.
 
+**مهم:** أمر <code>make_handoff.py</code> خاص بالترجمة عن طريق AI خارجي. لو الـ agent الحالي هو اللي هيترجم، تخطّى الأمر ده واتبع خطوات الـ skill.
+
 **أو من سطر الأوامر بدون أي agent** (شغّل الأوامر من مجلد الـ skill، و`<ws>` لازم يكون مجلد شغل منفصل عن اللعبة):
 
 ~~~cmd
 python scripts\inventory.py "<game>" --out "<ws>\reports"
+python scripts\engine_adapters.py "<game>" --out "<ws>\reports\ENGINE_ADAPTERS.json"
 python scripts\extract_text.py "<game>" --out "<ws>\normalized\strings.json" --target-lang ar
 python scripts\split_batches.py "<ws>\normalized\strings.json" --out "<ws>\translation_batches" --size 100
 python scripts\make_handoff.py "<ws>"

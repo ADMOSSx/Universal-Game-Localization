@@ -12,6 +12,12 @@ from merge_translations import entries_of, load_lenient
 BATCH_RE = re.compile(r"batch_\d{4}\.json")
 
 
+def natural_sort_key(path):
+    """Sort numbered return rounds by their numeric suffix (returned_2 before returned_10)."""
+    parts = re.split(r"(\d+)", Path(path).name)
+    return tuple((1, int(part)) if part.isdigit() else (0, part.casefold()) for part in parts)
+
+
 def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -23,7 +29,7 @@ def main():
     ws = Path(args.workspace)
     batches = Path(args.batches) if args.batches else ws / "translation_batches"
     returned = [Path(x) for x in args.returned] if args.returned is not None else \
-        sorted(d for d in ws.glob("returned*") if d.is_dir())
+        sorted((d for d in ws.glob("returned*") if d.is_dir()), key=natural_sort_key)
     files = sorted(f for f in batches.glob("*.json") if BATCH_RE.fullmatch(f.name)) if batches.is_dir() else []
     if not files:
         raise SystemExit(f"No batch files in {batches}. Run split_batches.py first.")

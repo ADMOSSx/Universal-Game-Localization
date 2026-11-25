@@ -15,7 +15,7 @@
 - Engine-specific localization candidates, runtime clues, safe next steps and regression tests.
 - Checksum-manifest verification and automated installable release packaging.
 
-## Unreleased
+## 1.4.0 — 2026-11-25
 - Fix: `arabic_lint.py` reported a literal `\n` before Arabic as `mixed-latin` (bad lookbehind).
 - Fix: `arabic_lint.py` now uses the validator's token regex (`%1$s`, `%.2f`, `[NAME]`, `${x}`, BBCode).
 - Fix: `validate_translations.py --source` takes `original` from the source for compact replies.
@@ -47,6 +47,8 @@
 - Token estimate: raised the UTF-8 byte heuristic to be more conservative for multilingual text; counts remain estimates, not tokenizer output.
 - Reliability: extraction output writes are staged atomically; JSON top-level string values can now be injected correctly.
 - Tests: expanded synthetic self-tests for JSON/CSV ID collisions, markup nesting, source integrity, safe output paths and overwrite protection.
+- Fix: manifest verification now rejects symlinked directories instead of accidentally skipping them as directories.
+- Fix: auto-detected return folders are sorted naturally, so returned_10 correctly comes after returned_2.
 
 ## 0.3.3
 - Docs: new README with banner, pipeline diagram, real terminal output and size chart (SVGs in `docs/images/`).
