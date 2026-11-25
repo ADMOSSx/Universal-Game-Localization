@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'skills/universal-game-localization/**'
+      - '.gitattributes'
       - '.github/workflows/publish-skill-release.yml'
 
 permissions:
