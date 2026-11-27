@@ -69,7 +69,7 @@ Most "AI localization" setups burn through free limits before a single string is
 | Area | Status |
 |---|---|
 | Core pipeline (inventory → extract → batch → merge → validate → patch) | ✅ Covered by a synthetic regression suite; CI on Windows and Ubuntu, Python 3.10 and 3.12. |
-| Real games | 🟡 One community report so far: *Hollow Knight* (Unity), Arabic partly working in-game, done with separate UnityPy scripts. See [SUPPORTED_GAMES](docs/SUPPORTED_GAMES.md) — **adding your game's result is the most useful contribution.** |
+| Real games | 🟡 Two documented reports: *Librerama 0.7.0* (Godot; Arabic verified in the tested main-menu/settings screens using a separate PCK/PO workflow) and *Hollow Knight 1.5* (Unity; partial Arabic). Neither report establishes full-game coverage. See [SUPPORTED_GAMES](docs/SUPPORTED_GAMES.md). |
 | Binary containers (`.pak`, `.assets`, `.locres`, …) | 🚫 Detected and reported, not unpacked by the core scripts. |
 
 ---
